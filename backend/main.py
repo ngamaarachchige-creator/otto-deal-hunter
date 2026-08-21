@@ -21,6 +21,7 @@ from .scrapers import (
     calculate_market_benchmarks, enrich_car_with_valuation, get_market_trends_summary
 )
 from .ai_assistant import inspect_car
+from .copilot import run_copilot_agent
 
 app = FastAPI(title="Lanka Car Hunter API", version="1.0.0")
 
@@ -362,6 +363,20 @@ def verify_ad_liveness(limit: int = 50):
     conn.commit()
     conn.close()
     return {"checked": checked, "marked_removed": removed, "status": "completed"}
+
+
+class CopilotChatRequest(BaseModel):
+    message: str
+    history: Optional[List[Dict[str, str]]] = None
+
+@app.post("/api/copilot/chat")
+def copilot_chat(req: CopilotChatRequest):
+    if not req.message or not req.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    try:
+        return run_copilot_agent(req.message.strip(), history=req.history)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Copilot agent error: {str(e)}")
 
 @app.post("/api/ai/inspect/{car_id}")
 def ai_inspect_car(car_id: int):
