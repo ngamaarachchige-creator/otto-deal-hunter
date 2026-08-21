@@ -417,6 +417,7 @@ function renderCarCard(car) {
             View Ad
           </a>
           <button class="btn-card-track" onclick="window.openTrackPipelineModal(${car.id})">+ Track Lead</button>
+          <button class="btn-card-track" onclick="window.openAiInspectModal(${car.id})">🤖 AI Inspect</button>
         </div>
       </div>
     </div>
@@ -539,6 +540,29 @@ window.refreshDossierData = async function() {
   const mod = await getDossierModule();
   mod.refreshDossierData();
 };
+
+// AI Inspection Assistant
+export async function openAiInspectModal(carId) {
+  const modal = document.getElementById('aiInspectModal');
+  const body = document.getElementById('aiInspectBody');
+  if (!modal || !body) return;
+  modal.classList.add('active');
+  body.innerHTML = `<span class="font-mono" style="color: var(--ink-secondary);">Asking OTTO AI to look this one over…</span>`;
+
+  try {
+    const res = await fetch(`/api/ai/inspect/${carId}`, { method: 'POST' });
+    if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+    const data = await res.json();
+    body.innerText = data.analysis || 'No response from AI assistant.';
+  } catch (e) {
+    body.innerHTML = `<span style="color: var(--danger);">Couldn't reach OTTO AI: ${e.message}</span>`;
+  }
+}
+export function closeAiInspectModal() {
+  document.getElementById('aiInspectModal')?.classList.remove('active');
+}
+window.openAiInspectModal = openAiInspectModal;
+window.closeAiInspectModal = closeAiInspectModal;
 
 // Global Window Bindings for Inline Handlers
 window.loadCars = loadCars;

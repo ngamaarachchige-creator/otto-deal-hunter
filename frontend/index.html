@@ -518,6 +518,19 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="aiInspectModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>🤖 OTTO AI Inspection</h2>
+        <button class="modal-close" onclick="window.closeAiInspectModal()">×</button>
+      </div>
+      <div id="aiInspectBody" style="font-size: 0.9rem; line-height: 1.55; color: var(--ink); white-space: pre-wrap; min-height: 4rem;"></div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+        <button class="btn-secondary" onclick="window.closeAiInspectModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Core App Entrypoint -->
   <script type="module" src="/static/app.js"></script>
 </body>

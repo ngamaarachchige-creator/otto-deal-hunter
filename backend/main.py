@@ -20,6 +20,7 @@ from .scrapers import (
     RiyasewanaScraper, IkmanScraper,
     calculate_market_benchmarks, enrich_car_with_valuation, get_market_trends_summary
 )
+from .ai_assistant import inspect_car
 
 app = FastAPI(title="Lanka Car Hunter API", version="1.0.0")
 
@@ -361,6 +362,27 @@ def verify_ad_liveness(limit: int = 50):
     conn.commit()
     conn.close()
     return {"checked": checked, "marked_removed": removed, "status": "completed"}
+
+@app.post("/api/ai/inspect/{car_id}")
+def ai_inspect_car(car_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM cars WHERE id = :id", {"id": car_id})
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Car not found")
+
+    car = dict(row)
+    benchmarks = calculate_market_benchmarks()
+    car = enrich_car_with_valuation(car, benchmarks)
+
+    try:
+        analysis = inspect_car(car)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"AI assistant unreachable: {e}")
+
+    return {"car_id": car_id, "analysis": analysis}
 
 @app.get("/api/export")
 def export_deals_csv(
