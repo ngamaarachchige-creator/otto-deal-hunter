@@ -548,7 +548,7 @@ export async function openAiInspectModal(carId) {
   if (!modal || !body) return;
   modal.classList.add('active');
   
-  const car = cars.find(c => c.id === carId);
+  const car = currentCars.find(c => c.id === carId);
   const imgHtml = car && car.image_url ? `<img src="${car.image_url}" style="width:100%; border-radius:12px; margin-bottom:1.25rem; max-height:220px; object-fit:cover; border:1px solid var(--line);">` : '';
 
   body.innerHTML = `${imgHtml}
