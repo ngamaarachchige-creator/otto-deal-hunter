@@ -1,137 +1,110 @@
-// Lanka Car Hunter · Core Shell (Code-Split Dynamic Runtime < 8KB)
+// Lanka Car Hunter · Main Application Controller
 
-let currentOffset = 0;
-export const pageLimit = 20;
-let currentDealFilter = '';
+import { parseNaturalLanguageQuery, renderParsedChips } from './modules/nluSearch.js';
+import { ScoutMascot } from './modules/mascot.js';
+
 let currentCars = [];
+let currentOffset = 0;
+const pageLimit = 20;
+let currentDealFilter = '';
+let currentNLU = {};
+let activeTab = 'deals';
+let mascot = null;
 
-// Dynamic Module Cache
-const modules = {
-  pipeline: null,
-  marketTrends: null,
-  calculator: null,
-  scraper: null
-};
+// Lazy module loaders
+let pipelineModule = null;
+let marketModule = null;
+let scraperModule = null;
+let calcModule = null;
+let dossierModule = null;
 
-// Format Sri Lankan Rupees (JetBrains Mono output)
-export function formatLKR(amount) {
-  if (!amount || isNaN(amount) || amount <= 0) return 'Rs. 0';
-  return 'Rs. ' + Math.round(amount).toLocaleString('en-LK');
+async function getPipelineModule() {
+  if (!pipelineModule) pipelineModule = await import('./modules/pipeline.js');
+  return pipelineModule;
+}
+async function getMarketModule() {
+  if (!marketModule) marketModule = await import('./modules/marketTrends.js');
+  return marketModule;
+}
+async function getScraperModule() {
+  if (!scraperModule) scraperModule = await import('./modules/scraper.js');
+  return scraperModule;
+}
+async function getCalcModule() {
+  if (!calcModule) calcModule = await import('./modules/calculator.js');
+  return calcModule;
+}
+async function getDossierModule() {
+  if (!dossierModule) dossierModule = await import('./modules/dossier.js');
+  return dossierModule;
 }
 
-// Parse any string with commas into a clean number
-export function parseFormattedNumber(val) {
-  if (typeof val === 'number') return val;
-  if (!val) return 0;
-  const clean = String(val).replace(/[^0-9.]/g, '');
-  return parseFloat(clean) || 0;
+// Global Currency Formatter
+export function formatLKR(val) {
+  if (!val || isNaN(val)) return 'Rs. 0';
+  return 'Rs. ' + Math.round(val).toLocaleString('en-US');
 }
 
-// Live Number Input Formatter (Inserts commas every 3 digits while keeping cursor intact)
-export function formatLiveNumberInput(inputEl) {
-  if (!inputEl) return;
-  const cursorPosition = inputEl.selectionStart;
-  const originalLength = inputEl.value.length;
-  
-  // Strip all non-digits
-  const rawDigits = inputEl.value.replace(/\D/g, '');
-  if (!rawDigits) {
-    inputEl.value = '';
+export function parseFormattedNumber(str) {
+  if (!str) return null;
+  const cleaned = String(str).replace(/[^\d.]/g, '');
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? null : num;
+}
+
+export function formatLiveNumberInput(input) {
+  const cursor = input.selectionStart;
+  const raw = input.value.replace(/[^\d]/g, '');
+  if (!raw) {
+    input.value = '';
     return;
   }
-  
-  const formatted = Number(rawDigits).toLocaleString('en-US');
-  inputEl.value = formatted;
-  
-  // Restore cursor position smoothly
-  const newLength = formatted.length;
-  const delta = newLength - originalLength;
-  const newPosition = Math.max(0, cursorPosition + delta);
-  try {
-    inputEl.setSelectionRange(newPosition, newPosition);
-  } catch (e) {}
+  const formatted = Number(raw).toLocaleString('en-US');
+  input.value = formatted;
 }
+window.formatLiveNumberInput = formatLiveNumberInput;
 
-// Lazy Loaders for Feature Chunks
-async function getPipelineModule() {
-  if (!modules.pipeline) {
-    modules.pipeline = await import('./modules/pipeline.js');
+// Tab Switcher
+export async function switchTab(tabId) {
+  activeTab = tabId;
+  const tabDeals = document.getElementById('tabDeals');
+  const tabPipeline = document.getElementById('tabPipeline');
+  const tabMarket = document.getElementById('tabMarket');
+  const tabDossier = document.getElementById('tabDossier');
+
+  const viewDeals = document.getElementById('viewDeals');
+  const viewPipeline = document.getElementById('viewPipeline');
+  const viewMarket = document.getElementById('viewMarket');
+  const dossierContent = document.getElementById('dossierTabContent');
+
+  if (tabDeals) tabDeals.classList.toggle('active', tabId === 'deals');
+  if (tabPipeline) tabPipeline.classList.toggle('active', tabId === 'pipeline');
+  if (tabMarket) tabMarket.classList.toggle('active', tabId === 'market');
+  if (tabDossier) tabDossier.classList.toggle('active', tabId === 'dossier');
+
+  if (viewDeals) viewDeals.style.display = tabId === 'deals' ? 'block' : 'none';
+  if (viewPipeline) viewPipeline.style.display = tabId === 'pipeline' ? 'block' : 'none';
+  if (viewMarket) viewMarket.style.display = tabId === 'market' ? 'block' : 'none';
+  if (dossierContent) dossierContent.style.display = tabId === 'dossier' ? 'flex' : 'none';
+
+  if (mascot) {
+    mascot.triggerState('inspecting', 1800);
   }
-  return modules.pipeline;
-}
 
-async function getMarketTrendsModule() {
-  if (!modules.marketTrends) {
-    modules.marketTrends = await import('./modules/marketTrends.js');
-  }
-  return modules.marketTrends;
-}
-
-async function getCalculatorModule() {
-  if (!modules.calculator) {
-    modules.calculator = await import('./modules/calculator.js');
-  }
-  return modules.calculator;
-}
-
-async function getScraperModule() {
-  if (!modules.scraper) {
-    modules.scraper = await import('./modules/scraper.js');
-  }
-  return modules.scraper;
-}
-
-async function getDossierModule() {
-  if (!modules.dossier) {
-    modules.dossier = await import('./modules/dossier.js');
-  }
-  return modules.dossier;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  loadStats();
-  loadCars(0);
-});
-
-// Navigation Tab Switcher (Loads View Chunks Lazily)
-export async function switchTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.view-section').forEach(v => v.style.display = 'none');
-  const dossierContainer = document.getElementById('dossierTabContent');
-  if (dossierContainer) dossierContainer.style.display = 'none';
-
-  if (tab === 'deals') {
-    document.getElementById('tabDeals').classList.add('active');
-    document.getElementById('viewDeals').style.display = 'block';
-    loadCars(currentOffset);
-  } else if (tab === 'pipeline') {
-    document.getElementById('tabPipeline').classList.add('active');
-    document.getElementById('viewPipeline').style.display = 'block';
+  if (tabId === 'pipeline') {
     const mod = await getPipelineModule();
     mod.loadPipeline();
-  } else if (tab === 'market') {
-    document.getElementById('tabMarket').classList.add('active');
-    document.getElementById('viewMarket').style.display = 'block';
-    const mod = await getMarketTrendsModule();
+  } else if (tabId === 'market') {
+    const mod = await getMarketModule();
     mod.loadMarketTrends(0);
-  } else if (tab === 'dossier') {
-    document.getElementById('tabDossier').classList.add('active');
-    if (dossierContainer) dossierContainer.style.display = 'flex';
+  } else if (tabId === 'dossier') {
     const mod = await getDossierModule();
-    mod.loadDossierTab();
+    mod.loadDossierView();
   }
 }
+window.switchTab = switchTab;
 
-window.selectDossierModel = async (key) => {
-  const mod = await getDossierModule();
-  mod.selectDossierModel(key);
-};
-window.refreshDossierData = async () => {
-  const mod = await getDossierModule();
-  mod.refreshDossierData();
-};
-
-// Load Top KPI Stats
+// Load Stats
 export async function loadStats() {
   try {
     const res = await fetch('/api/stats');
@@ -143,18 +116,17 @@ export async function loadStats() {
 
     if (data.active_leads > 0) {
       const badge = document.getElementById('pipelineCountBadge');
-      badge.innerText = data.active_leads;
-      badge.style.display = 'inline-block';
+      if (badge) {
+        badge.innerText = data.active_leads;
+        badge.style.display = 'inline-block';
+      }
     }
   } catch (e) {
     console.error('Error fetching stats:', e);
   }
 }
 
-import { parseNaturalLanguageQuery, renderParsedChips } from './modules/nluSearch.js';
-
-let currentNLU = {};
-
+// NLU Search Handlers
 export function handleSearchInput(e) {
   const q = e.target.value;
   const clearBtn = document.getElementById('clearSearchBtn');
@@ -180,11 +152,12 @@ export function clearSearchQuery() {
 }
 
 export function executeNLUSearch() {
+  if (mascot) mascot.triggerState('searching', 2500);
+
   const query = (document.getElementById('filterQuery')?.value || '').trim();
   if (query) {
     currentNLU = parseNaturalLanguageQuery(query);
     
-    // Sync dropdowns if NLU extracted them
     if (currentNLU.make) {
       const makeEl = document.getElementById('filterMake');
       if (makeEl) makeEl.value = currentNLU.make;
@@ -294,15 +267,9 @@ export function getFilterParams(offset = 0) {
     sort_by: sortBy
   });
 
-  if (currentNLU.model) {
-    params.append('model', currentNLU.model);
-  }
-  if (currentNLU.min_year) {
-    params.append('min_year', currentNLU.min_year);
-  }
-  if (currentNLU.max_year) {
-    params.append('max_year', currentNLU.max_year);
-  }
+  if (currentNLU.model) params.append('model', currentNLU.model);
+  if (currentNLU.min_year) params.append('min_year', currentNLU.min_year);
+  if (currentNLU.max_year) params.append('max_year', currentNLU.max_year);
 
   if (currentNLU.cleaned_query) {
     params.append('query', currentNLU.cleaned_query);
@@ -334,7 +301,6 @@ export async function loadCars(offset = 0) {
 
     document.getElementById('feedCount').innerText = `(${data.total.toLocaleString()} listings)`;
     
-    // Pagination updates
     const currentPage = Math.floor(offset / pageLimit) + 1;
     const totalPages = Math.ceil(data.total / pageLimit) || 1;
     document.getElementById('pageIndicator').innerText = `Page ${currentPage} of ${totalPages}`;
@@ -346,12 +312,18 @@ export async function loadCars(offset = 0) {
         <div class="empty-state" style="grid-column: 1/-1;">
           <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--ink);">No listings match the current filters</h3>
           <p style="font-size: 0.85rem; color: var(--ink-secondary); max-width: 480px; margin-top: 0.25rem;">
-            Try clearing specific criteria or click <strong>"Fetch Market Ads"</strong> to index fresh inventory from Riyasewana and Ikman.lk.
+            Try clearing criteria or click <strong>"Fetch Ads"</strong> to index fresh inventory.
           </p>
-          <button class="btn-primary" style="margin-top: 0.75rem;" onclick="window.openScrapeModal()">Fetch Market Ads</button>
+          <button class="btn-primary" style="margin-top: 0.75rem;" onclick="window.openScrapeModal()">Fetch Ads</button>
         </div>
       `;
       return;
+    }
+
+    // Check if hot deals are found and excite mascot
+    const hasHotDeals = currentCars.some(c => c.valuation_rating === 'HOT_DEAL');
+    if (hasHotDeals && mascot) {
+      mascot.triggerState('excited', 3000);
     }
 
     grid.innerHTML = currentCars.map(c => renderCarCard(c)).join('');
@@ -359,8 +331,8 @@ export async function loadCars(offset = 0) {
     grid.innerHTML = `<div class="empty-state" style="grid-column: 1/-1;"><p style="color: var(--danger);">Failed to load listings: ${e.message}</p></div>`;
   }
 }
+window.loadCars = loadCars;
 
-// Render Individual Car Card
 function renderCarCard(car) {
   const isHot = car.valuation_rating === 'HOT_DEAL';
   const isGood = car.valuation_rating === 'GOOD_DEAL';
@@ -368,271 +340,199 @@ function renderCarCard(car) {
 
   let dealBadgeHtml = '';
   if (isHot) {
-    dealBadgeHtml = `<span class="badge-deal hot">${car.deal_tag}</span>`;
+    dealBadgeHtml = `<span class="badge-deal hot">${car.deal_tag || 'HOT FLIP DEAL'}</span>`;
   } else if (isGood) {
-    dealBadgeHtml = `<span class="badge-deal good">${car.deal_tag}</span>`;
+    dealBadgeHtml = `<span class="badge-deal good">GOOD DEAL</span>`;
   } else if (isUnpriced) {
-    dealBadgeHtml = `<span class="badge-deal unpriced">Price on request</span>`;
+    dealBadgeHtml = `<span class="badge-deal unpriced">PRICE ON REQUEST</span>`;
   }
 
-  const imageHtml = car.image_url 
-    ? `<img src="${car.image_url}" alt="${car.title}" class="car-img" onerror="this.outerHTML='<div class=\\'car-img-fallback\\'>NO PREVIEW AVAILABLE</div>'">`
-    : `<div class="car-img-fallback">NO PREVIEW AVAILABLE</div>`;
+  const mediaHtml = car.image_url 
+    ? `<img src="${car.image_url}" alt="${car.title}" class="car-img" loading="lazy" onerror="this.outerHTML='<div class=\\'car-img-fallback\\'>Image Unavailable</div>'">`
+    : `<div class="car-img-fallback">No Preview Image</div>`;
 
-  const profitStripHtml = (car.potential_profit_lkr && car.potential_profit_lkr > 0) ? `
-    <div class="flip-estimate-box">
-      <span class="label">Est. Gross Margin</span>
-      <span class="value">+${formatLKR(car.potential_profit_lkr)}</span>
-    </div>
-  ` : '';
+  let priceHtml = '';
+  if (isUnpriced) {
+    priceHtml = `<span class="car-price unpriced">Negotiable</span>`;
+  } else {
+    priceHtml = `<span class="car-price">${formatLKR(car.price)}</span>`;
+  }
 
-  const trackedStage = car.pipeline_stage;
-  const stageLabels = {
-    'saved': 'Saved',
-    'to_call': 'Seller Contact',
-    'inspecting': 'Inspection',
-    'offered': 'Negotiation',
-    'detailing': 'In Prep',
-    'sold': 'Sold'
-  };
-  const trackBtnText = trackedStage ? `Stage: ${stageLabels[trackedStage] || trackedStage}` : `+ Track Record`;
+  let flipBoxHtml = '';
+  if (car.estimated_profit && car.estimated_profit > 0) {
+    flipBoxHtml = `
+      <div class="flip-estimate-box">
+        <span class="label">Est. Net Profit:</span>
+        <span class="value">+${formatLKR(car.estimated_profit)}</span>
+      </div>
+    `;
+  }
+
+  let liquidityBadge = '';
+  if (car.liquidity_tier) {
+    liquidityBadge = `<span class="badge-liquidity" title="${car.liquidity_days_est || ''}">⚡ ${car.liquidity_tier}</span>`;
+  }
 
   return `
     <div class="car-card ${isHot ? 'hot-deal' : ''}">
       <div class="car-media">
-        ${imageHtml}
-        <span class="badge-source">${car.source === 'riyasewana' ? 'Riyasewana' : 'Ikman.lk'}</span>
+        <span class="badge-source">${car.source.toUpperCase()}</span>
         ${dealBadgeHtml}
+        ${mediaHtml}
       </div>
-
       <div class="car-card-body">
-        <div>
-          <h3 class="car-title" title="${car.title}">${car.title}</h3>
-          <div class="car-meta-line" style="margin-top: 0.35rem;">
-            <span>${car.district || car.location || 'Sri Lanka'}</span>
-            ${car.year ? `<span>· ${car.year}</span>` : ''}
-            ${car.mileage_display ? `<span>· ${car.mileage_display}</span>` : ''}
-          </div>
-          ${car.liquidity_tag ? `
-            <div style="margin-top: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
-              <span class="badge-liquidity">${car.liquidity_tag}</span>
-              <span style="font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-secondary);">${car.liquidity_tier || ''}</span>
-            </div>
-          ` : ''}
+        <h3 class="car-title">${car.title}</h3>
+        <div class="car-meta-line">
+          ${car.year ? `<span>${car.year}</span> • ` : ''}
+          ${car.mileage_km ? `<span>${car.mileage_km.toLocaleString()} km</span> • ` : ''}
+          <span>${car.location || car.district || 'Sri Lanka'}</span>
         </div>
-
+        ${liquidityBadge ? `<div style="margin-top: -0.25rem;">${liquidityBadge}</div>` : ''}
+        ${flipBoxHtml}
         <div class="car-price-row">
           <div>
-            <div class="car-price ${isUnpriced ? 'unpriced' : ''}">
-              ${isUnpriced ? 'Price on request' : (car.price_display || 'Price on request')}
-            </div>
-            <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-secondary); margin-top: 2px;">
-              ${car.date_posted || 'Active ad'}
-            </div>
+            <div style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--ink-secondary);">ASKING PRICE</div>
+            ${priceHtml}
           </div>
-          ${car.market_avg_price > 0 ? `
+          ${car.market_avg_price ? `
             <div class="market-avg-info">
-              Market Benchmark<br><strong>${formatLKR(car.market_avg_price)}</strong>
+              <div>Market Avg: <strong>${formatLKR(car.market_avg_price)}</strong></div>
+              ${car.discount_percentage ? `<div style="color: var(--success); font-weight: 700;">${car.discount_percentage}% below market</div>` : ''}
             </div>
           ` : ''}
         </div>
-
-        ${profitStripHtml}
-
-        <div class="car-card-actions">
-          <button class="btn-card-calc" onclick="window.openCalcModal(${car.id})">
-            Calculator
-          </button>
-          <button class="btn-card-track" onclick="window.openPipelineModal(${car.id})">
-            ${trackBtnText}
-          </button>
-          <a href="${car.url}" target="_blank" rel="noopener" class="btn-card-link" title="Open source ad on ${car.source}">
-            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        <div class="car-actions">
+          <a href="${car.url}" target="_blank" rel="noopener noreferrer" class="btn-card-link">
+            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            View Ad
           </a>
+          <button class="btn-card-track" onclick="window.openTrackPipelineModal(${car.id})">+ Track Lead</button>
         </div>
       </div>
     </div>
   `;
 }
 
-// Window Bridge Functions for HTML Event Handlers
-window.switchTab = switchTab;
-window.loadCars = loadCars;
-window.formatLiveNumberInput = formatLiveNumberInput;
-window.parseFormattedNumber = parseFormattedNumber;
+// Preset Filters
+export function applyPreset(presetType, btn) {
+  document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
 
-window.changePage = function(delta) {
-  const newOffset = Math.max(0, currentOffset + (delta * pageLimit));
-  loadCars(newOffset);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
+  const make = document.getElementById('filterMake');
+  const district = document.getElementById('filterDistrict');
+  const minP = document.getElementById('filterMinPrice');
+  const maxP = document.getElementById('filterMaxPrice');
+  const query = document.getElementById('filterQuery');
 
-window.handleSearchKey = function(event) {
-  if (event.key === 'Enter') {
-    loadCars(0);
+  if (make) make.value = '';
+  if (district) district.value = '';
+  if (minP) minP.value = '';
+  if (maxP) maxP.value = '';
+  if (query) query.value = '';
+  currentDealFilter = '';
+  currentNLU = {};
+  renderActiveNLUChips();
+
+  if (presetType === 'hot') {
+    currentDealFilter = 'hot';
+  } else if (presetType === 'alto') {
+    if (make) make.value = 'Suzuki';
+    if (query) query.value = 'Alto';
+  } else if (presetType === 'wagonr') {
+    if (make) make.value = 'Suzuki';
+    if (query) query.value = 'Wagon R';
+  } else if (presetType === 'vitz_aqua') {
+    if (make) make.value = 'Toyota';
+    if (query) query.value = 'Aqua';
+  } else if (presetType === 'budget') {
+    if (maxP) maxP.value = '3,500,000';
+  } else if (presetType === 'colombo') {
+    if (district) district.value = 'Colombo';
   }
-};
 
-window.resetFilters = function() {
+  loadCars(0);
+}
+window.applyPreset = applyPreset;
+
+export function setDealFilter(filterVal, btn) {
+  document.querySelectorAll('.val-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  currentDealFilter = filterVal;
+  loadCars(0);
+}
+window.setDealFilter = setDealFilter;
+
+export function resetFilters() {
   document.getElementById('filterQuery').value = '';
   document.getElementById('filterMake').value = '';
   document.getElementById('filterDistrict').value = '';
   document.getElementById('filterMinPrice').value = '';
   document.getElementById('filterMaxPrice').value = '';
   document.getElementById('filterSource').value = '';
-  window.setDealFilter('', document.getElementById('pillAll'));
-  document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
-  loadCars(0);
-};
-
-window.setDealFilter = function(type, el) {
-  currentDealFilter = type;
-  document.querySelectorAll('.val-pill').forEach(p => p.classList.remove('active'));
-  if (el) el.classList.add('active');
-  loadCars(0);
-};
-
-window.applyPreset = function(preset, el) {
-  document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
-  if (el) el.classList.add('active');
-
-  const queryEl = document.getElementById('filterQuery');
-  const makeEl = document.getElementById('filterMake');
-  const districtEl = document.getElementById('filterDistrict');
-  const minPriceEl = document.getElementById('filterMinPrice');
-  const maxPriceEl = document.getElementById('filterMaxPrice');
-
-  queryEl.value = '';
-  makeEl.value = '';
-  districtEl.value = '';
-  minPriceEl.value = '';
-  maxPriceEl.value = '';
   currentDealFilter = '';
-
-  if (preset === 'hot') {
-    window.setDealFilter('hot', document.getElementById('pillHot'));
-    return;
-  } else if (preset === 'alto') {
-    makeEl.value = 'Suzuki';
-    queryEl.value = 'Alto';
-  } else if (preset === 'wagonr') {
-    makeEl.value = 'Suzuki';
-    queryEl.value = 'Wagon R';
-  } else if (preset === 'vitz_aqua') {
-    makeEl.value = 'Toyota';
-    queryEl.value = 'Vitz';
-  } else if (preset === 'budget') {
-    maxPriceEl.value = '3,500,000';
-  } else if (preset === 'colombo') {
-    districtEl.value = 'Colombo';
-  }
-
+  currentNLU = {};
+  renderActiveNLUChips();
+  document.querySelectorAll('.val-pill').forEach(p => p.classList.remove('active'));
+  document.getElementById('pillAll')?.classList.add('active');
+  document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+  document.querySelector('.preset-chip')?.classList.add('active');
   loadCars(0);
-};
+}
+window.resetFilters = resetFilters;
 
-// Dynamic Calculator Bridges
-window.openCalcModal = async function(carId) {
-  const mod = await getCalculatorModule();
-  mod.openCalcModal(carId, currentCars);
-};
+export function changePage(dir) {
+  const newOffset = currentOffset + dir * pageLimit;
+  if (newOffset >= 0) loadCars(newOffset);
+}
+window.changePage = changePage;
 
-window.closeCalcModal = async function() {
-  const mod = await getCalculatorModule();
-  mod.closeCalcModal();
-};
+// Export CSV
+export function exportData() {
+  window.open('/api/export/csv', '_blank');
+}
+window.exportData = exportData;
 
-window.recomputeFlip = async function() {
-  const mod = await getCalculatorModule();
-  mod.recomputeFlip();
-};
-
-window.saveCalculatorToPipeline = async function() {
-  const mod = await getCalculatorModule();
-  mod.saveCalculatorToPipeline(() => {
-    loadStats();
-    if (document.getElementById('viewPipeline').style.display === 'block') {
-      getPipelineModule().then(m => m.loadPipeline());
-    }
-  });
-};
-
-// Dynamic Pipeline Bridges
-window.openPipelineModal = async function(carId) {
-  const mod = await getPipelineModule();
-  mod.openPipelineModal(carId, currentCars);
-};
-
-window.closePipelineModal = async function() {
-  const mod = await getPipelineModule();
-  mod.closePipelineModal();
-};
-
-window.submitPipelineUpdate = async function() {
-  const mod = await getPipelineModule();
-  mod.submitPipelineUpdate(() => {
-    loadStats();
-    loadCars(currentOffset);
-    if (document.getElementById('viewPipeline').style.display === 'block') {
-      mod.loadPipeline();
-    }
-  });
-};
-
-window.deleteLeadFromPipeline = async function() {
-  const mod = await getPipelineModule();
-  mod.deleteLeadFromPipeline(() => {
-    loadStats();
-    loadCars(currentOffset);
-    if (document.getElementById('viewPipeline').style.display === 'block') {
-      mod.loadPipeline();
-    }
-  });
-};
-
-// Dynamic Market Trends Bridges
-window.changeMarketPage = async function(delta) {
-  const mod = await getMarketTrendsModule();
-  mod.changeMarketPage(delta);
-};
-
-window.searchSpecificModel = async function(make, model) {
-  const mod = await getMarketTrendsModule();
-  mod.searchSpecificModel(make, model);
-};
-
-// Dynamic Scraper Bridges
+// Modal Wrappers
 window.openScrapeModal = async function() {
   const mod = await getScraperModule();
   mod.openScrapeModal();
 };
-
 window.closeScrapeModal = async function() {
   const mod = await getScraperModule();
   mod.closeScrapeModal();
 };
-
-window.openEmptyScrapeModal = async function(msg) {
-  const mod = await getScraperModule();
-  mod.openEmptyScrapeModal(msg);
+window.openTrackPipelineModal = async function(carId) {
+  const mod = await getPipelineModule();
+  mod.openTrackPipelineModal(carId);
+};
+window.closePipelineModal = async function() {
+  const mod = await getPipelineModule();
+  mod.closePipelineModal();
+};
+window.openCalcModal = async function(carId) {
+  const mod = await getCalcModule();
+  mod.openCalcModal(carId);
+};
+window.closeCalcModal = async function() {
+  const mod = await getCalcModule();
+  mod.closeCalcModal();
+};
+window.changeMarketPage = async function(dir) {
+  const mod = await getMarketModule();
+  mod.changeMarketPage(dir);
+};
+window.selectDossierModel = async function(modelKey) {
+  const mod = await getDossierModule();
+  mod.selectDossierModel(modelKey);
+};
+window.refreshDossierData = async function() {
+  const mod = await getDossierModule();
+  mod.refreshDossierData();
 };
 
-window.closeEmptyScrapeModal = async function() {
-  const mod = await getScraperModule();
-  mod.closeEmptyScrapeModal();
-};
-
-window.startScrapeJob = async function() {
-  const mod = await getScraperModule();
-  mod.startScrapeJob(() => {
-    loadStats();
-    loadCars(0);
-    if (document.getElementById('viewMarket').style.display === 'block') {
-      getMarketTrendsModule().then(m => m.loadMarketTrends(0));
-    }
-  });
-};
-
-window.exportData = function() {
-  const params = getFilterParams(0);
-  window.location.href = `/api/export?${params.toString()}`;
-};
+// Initialization
+document.addEventListener('DOMContentLoaded', () => {
+  mascot = new ScoutMascot('mascotContainer');
+  loadStats();
+  loadCars(0);
+});

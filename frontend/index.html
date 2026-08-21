@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lanka Car Hunter · Vehicle Acquisition & Deal Management</title>
+  <title>Lanka Car Hunter · Vehicle Acquisition & Deal Deck</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -11,18 +11,14 @@
 </head>
 <body>
 
-  <!-- Top Header -->
+  <!-- Minimalist Header with Interactive Scout Mascot -->
   <header>
     <div class="header-container">
       <div class="logo-wrap">
-        <div class="brand-mark" aria-hidden="true">
-          <div class="bar"></div>
-          <div class="bar"></div>
-          <div class="bar"></div>
-        </div>
+        <div id="mascotContainer" class="mascot-avatar" title="Click to greet Scout AI!"></div>
         <div class="logo-text">
-          <h1>LANKA CAR HUNTER</h1>
-          <span>Vehicle Acquisition & Deal Deck · Sri Lanka</span>
+          <h1>Lanka Car Hunter</h1>
+          <span>AI Deal Intelligence & Acquisition Deck</span>
         </div>
       </div>
 
@@ -30,7 +26,7 @@
       <div class="nav-tabs">
         <button class="tab-btn active" id="tabDeals" onclick="switchTab('deals')">
           <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-          Inventory & Feed
+          Inventory
         </button>
         <button class="tab-btn" id="tabPipeline" onclick="switchTab('pipeline')">
           <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
@@ -38,7 +34,7 @@
         </button>
         <button class="tab-btn" id="tabMarket" onclick="switchTab('market')">
           <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
-          Market Valuation Index
+          Valuation Index
         </button>
         <button class="tab-btn" id="tabDossier" onclick="switchTab('dossier')">
           <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
@@ -54,7 +50,7 @@
         </button>
         <button class="btn-primary" onclick="openScrapeModal()">
           <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-          Fetch Market Ads
+          Fetch Ads
         </button>
       </div>
     </div>
@@ -66,22 +62,22 @@
     <!-- KPI Deck Summary -->
     <div class="stats-grid">
       <div class="stat-card">
-        <span class="stat-label">Indexed Vehicles</span>
+        <span class="stat-label">Indexed Cars</span>
         <div class="stat-value" id="statTotalCars">0</div>
       </div>
 
       <div class="stat-card">
-        <span class="stat-label">Underpriced Opportunities</span>
+        <span class="stat-label">Hot Opportunities</span>
         <div class="stat-value success" id="statHotDeals">0</div>
       </div>
 
       <div class="stat-card">
-        <span class="stat-label">Estimated Gross Margin</span>
+        <span class="stat-label">Est. Gross Margin</span>
         <div class="stat-value signal" id="statPotentialProfit">Rs. 0</div>
       </div>
 
       <div class="stat-card">
-        <span class="stat-label">Active Acquisition Leads</span>
+        <span class="stat-label">Active Leads</span>
         <div class="stat-value" id="statActiveLeads">0</div>
       </div>
     </div>
@@ -177,25 +173,25 @@
       <!-- Feed Header -->
       <div class="feed-header">
         <div class="feed-title">
-          <span>Active Inventory</span>
-          <span class="feed-count" id="feedCount">(0 listings)</span>
+          <h2>Active Market Listings</h2>
+          <span class="feed-count" id="feedCount">(Loading...)</span>
         </div>
 
         <div class="sort-wrap">
-          <label>Sort:</label>
-          <select id="sortBy" class="custom-select" onchange="loadCars(0)">
-            <option value="date_desc">Newest Listings</option>
+          <label for="sortBy">Sort By:</label>
+          <select id="sortBy" class="custom-select font-mono" onchange="loadCars(0)">
+            <option value="date_desc" selected>Latest Scraped</option>
             <option value="price_asc">Price: Low to High</option>
             <option value="price_desc">Price: High to Low</option>
-            <option value="year_desc">Model Year: Newest</option>
-            <option value="mileage_asc">Mileage: Lowest</option>
+            <option value="year_desc">Year: Newest First</option>
+            <option value="mileage_asc">Lowest Mileage</option>
           </select>
         </div>
       </div>
 
-      <!-- Car Grid -->
+      <!-- Grid of Car Cards -->
       <div class="car-grid" id="carGrid">
-        <!-- Injected via JavaScript -->
+        <!-- Populated dynamically via app.js -->
       </div>
 
       <!-- Pagination Controls -->
@@ -206,67 +202,77 @@
       </div>
     </div>
 
-    <!-- VIEW 2: FLIP PIPELINE KANBAN -->
+    <!-- VIEW 2: FLIP CRM PIPELINE (KANBAN) -->
     <div id="viewPipeline" class="view-section" style="display: none;">
+      <div class="feed-header" style="margin-bottom: 1.25rem;">
+        <div class="feed-title">
+          <h2>Acquisition & Flip Pipeline</h2>
+          <span class="feed-count">Track leads from initial contact to resale</span>
+        </div>
+        <button class="btn-primary" onclick="window.refreshPipeline()">Refresh Deals</button>
+      </div>
+
+      <!-- 6 Stages Kanban Container -->
       <div class="pipeline-container">
-        <!-- Stage 1: Saved -->
-        <div class="kanban-col">
+        <div class="kanban-col" data-stage="saved">
           <div class="kanban-header">
-            <div class="kanban-title">Saved Stock</div>
-            <span class="kanban-badge" id="badge-saved">0</span>
+            <span class="kanban-title">1. Saved Deals</span>
+            <span class="kanban-count" id="count_saved">0</span>
           </div>
-          <div class="kanban-cards" id="col-saved"></div>
+          <div class="pipeline-cards" id="stage_saved"></div>
         </div>
 
-        <!-- Stage 2: To Call -->
-        <div class="kanban-col">
+        <div class="kanban-col" data-stage="to_call">
           <div class="kanban-header">
-            <div class="kanban-title">Seller Contact</div>
-            <span class="kanban-badge" id="badge-to_call">0</span>
+            <span class="kanban-title">2. Seller Contact</span>
+            <span class="kanban-count" id="count_to_call">0</span>
           </div>
-          <div class="kanban-cards" id="col-to_call"></div>
+          <div class="pipeline-cards" id="stage_to_call"></div>
         </div>
 
-        <!-- Stage 3: Inspecting -->
-        <div class="kanban-col">
+        <div class="kanban-col" data-stage="inspecting">
           <div class="kanban-header">
-            <div class="kanban-title">Lot Inspection</div>
-            <span class="kanban-badge" id="badge-inspecting">0</span>
+            <span class="kanban-title">3. Inspection</span>
+            <span class="kanban-count" id="count_inspecting">0</span>
           </div>
-          <div class="kanban-cards" id="col-inspecting"></div>
+          <div class="pipeline-cards" id="stage_inspecting"></div>
         </div>
 
-        <!-- Stage 4: Offered -->
-        <div class="kanban-col">
+        <div class="kanban-col" data-stage="offered">
           <div class="kanban-header">
-            <div class="kanban-title">Negotiation / Offer</div>
-            <span class="kanban-badge" id="badge-offered">0</span>
+            <span class="kanban-title">4. Negotiation</span>
+            <span class="kanban-count" id="count_offered">0</span>
           </div>
-          <div class="kanban-cards" id="col-offered"></div>
+          <div class="pipeline-cards" id="stage_offered"></div>
         </div>
 
-        <!-- Stage 5: Detailing / In Prep -->
-        <div class="kanban-col">
+        <div class="kanban-col" data-stage="detailing">
           <div class="kanban-header">
-            <div class="kanban-title">In Prep / Polish</div>
-            <span class="kanban-badge" id="badge-detailing">0</span>
+            <span class="kanban-title">5. In Prep / Repair</span>
+            <span class="kanban-count" id="count_detailing">0</span>
           </div>
-          <div class="kanban-cards" id="col-detailing"></div>
+          <div class="pipeline-cards" id="stage_detailing"></div>
         </div>
 
-        <!-- Stage 6: Sold -->
-        <div class="kanban-col">
+        <div class="kanban-col" data-stage="sold">
           <div class="kanban-header">
-            <div class="kanban-title">Sold / Realized</div>
-            <span class="kanban-badge" id="badge-sold">0</span>
+            <span class="kanban-title">6. Sold / Completed</span>
+            <span class="kanban-count" id="count_sold">0</span>
           </div>
-          <div class="kanban-cards" id="col-sold"></div>
+          <div class="pipeline-cards" id="stage_sold"></div>
         </div>
       </div>
     </div>
 
     <!-- VIEW 3: MARKET VALUATION INDEX -->
     <div id="viewMarket" class="view-section" style="display: none;">
+      <div class="feed-header" style="margin-bottom: 1.25rem;">
+        <div class="feed-title">
+          <h2>Market Valuation & Statistical Benchmarks</h2>
+          <span class="feed-count">Statistical price distribution across Sri Lankan vehicle models</span>
+        </div>
+      </div>
+
       <div class="table-card">
         <table class="data-table">
           <thead>
@@ -297,7 +303,7 @@
     <!-- TAB: SCOUTED INTELLIGENCE DOSSIER -->
     <div id="dossierTabContent" style="display: none; flex-direction: column; gap: 1.5rem;">
       <!-- Dossier Header & Model Switcher -->
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--surface-card); padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-radius: var(--radius-lg);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--surface-card); padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
         <div>
           <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--ink);">AI Vehicle Deal Dossiers</h2>
           <p style="font-size: 0.85rem; color: var(--ink-secondary); margin-top: 0.25rem;">Real-time market floor intelligence, fuel economy ratings, and flip profit breakdowns</p>
@@ -380,176 +386,136 @@
         <div id="scrapeLogSection" style="display: none; flex-direction: column; gap: 0.4rem;">
           <div style="display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem;">
             <span id="scrapeCurrentStep" style="color: var(--ink);">Processing request</span>
-            <span id="scrapeStatusText" class="font-mono" style="font-weight: 600; color: var(--signal);">RUNNING</span>
+            <span id="scrapePercent" style="color: var(--signal);">0%</span>
           </div>
           <div class="progress-bar-wrap">
             <div class="progress-bar-fill" id="scrapeProgressBar"></div>
           </div>
-          <div class="terminal-log" id="scrapeLogs"></div>
+          <div class="terminal-log" id="scrapeTerminalLog"></div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.25rem;">
-          <button class="btn-secondary" onclick="closeScrapeModal()">Close</button>
-          <button class="btn-primary" id="startScrapeBtn" onclick="startScrapeJob()">Start Fetch</button>
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
+          <button class="btn-secondary" onclick="closeScrapeModal()">Cancel</button>
+          <button class="btn-primary" id="startScrapeBtn" onclick="window.startScrapingJob()">Start Scraping</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: FLIP PROFIT & PREPARATION CALCULATOR -->
-  <div class="modal-backdrop" id="calcModal">
-    <div class="modal-box" style="max-width: 620px;">
+  <!-- MODAL: PIPELINE LEAD TRACKING -->
+  <div class="modal-backdrop" id="pipelineModal">
+    <div class="modal-box">
       <div class="modal-header">
-        <h2>Flip Profit & Detailing Calculator</h2>
+        <h2 id="pipelineModalTitle">Track Acquisition Lead</h2>
+        <button class="modal-close" onclick="closePipelineModal()">×</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <input type="hidden" id="pipeCarId">
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div>
+            <label class="stat-label">Pipeline Stage</label>
+            <select id="pipeStage" class="custom-select" style="width: 100%; margin-top: 0.3rem;">
+              <option value="saved">1. Saved Lead</option>
+              <option value="to_call">2. Seller Contact</option>
+              <option value="inspecting">3. Vehicle Inspection</option>
+              <option value="offered">4. Price Negotiation</option>
+              <option value="detailing">5. In Prep / Repair</option>
+              <option value="sold">6. Sold / Flipped</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="stat-label">Seller Contact Number</label>
+            <input type="text" id="pipePhone" class="custom-input" placeholder="e.g. 077 123 4567" style="margin-top: 0.3rem;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div>
+            <label class="stat-label">Negotiated Purchase (LKR)</label>
+            <input type="text" inputmode="numeric" id="pipePurchasePrice" class="custom-input font-mono" placeholder="e.g. 4,800,000" oninput="window.formatLiveNumberInput(this)" style="margin-top: 0.3rem;">
+          </div>
+
+          <div>
+            <label class="stat-label">Estimated Repairs & Detailing</label>
+            <input type="text" inputmode="numeric" id="pipeRepairCost" class="custom-input font-mono" placeholder="e.g. 45,000" oninput="window.formatLiveNumberInput(this)" style="margin-top: 0.3rem;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div>
+            <label class="stat-label">Target Resale Price (LKR)</label>
+            <input type="text" inputmode="numeric" id="pipeTargetResale" class="custom-input font-mono" placeholder="e.g. 5,450,000" oninput="window.formatLiveNumberInput(this)" style="margin-top: 0.3rem;">
+          </div>
+
+          <div>
+            <label class="stat-label">Actual Final Sold Price</label>
+            <input type="text" inputmode="numeric" id="pipeActualSold" class="custom-input font-mono" placeholder="e.g. 5,400,000" oninput="window.formatLiveNumberInput(this)" style="margin-top: 0.3rem;">
+          </div>
+        </div>
+
+        <div>
+          <label class="stat-label">Mechanic / Inspection Notes</label>
+          <textarea id="pipeNotes" class="custom-input" rows="3" placeholder="Condition of tires, battery health, exterior touch-up requirements..." style="margin-top: 0.3rem; resize: vertical;"></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
+          <button class="btn-secondary" onclick="closePipelineModal()">Cancel</button>
+          <button class="btn-primary" onclick="window.savePipelineLead()">Save Deal Record</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: FLIP PROFIT CALCULATOR -->
+  <div class="modal-backdrop" id="calcModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>Flip Margin Calculator</h2>
         <button class="modal-close" onclick="closeCalcModal()">×</button>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 1rem;">
-        <div id="calcCarSummary" style="background: var(--surface-subtle); padding: 0.75rem 0.9rem; border-radius: var(--radius-sm); border: 1px solid var(--border);">
-          <!-- Summary injected dynamically -->
-        </div>
-
         <div class="calc-grid">
           <div class="calc-row">
-            <label>Agreed Purchase Price (LKR)</label>
-            <input type="text" inputmode="numeric" id="calcBuyPrice" class="custom-input font-mono" placeholder="Enter purchase price" oninput="window.formatLiveNumberInput(this); window.recomputeFlip();">
+            <label>Purchase / Offer Price (LKR)</label>
+            <input type="text" inputmode="numeric" id="calcBuyPrice" class="custom-input font-mono" oninput="window.formatLiveNumberInput(this); window.recalcFlipMargin();">
           </div>
 
           <div class="calc-row">
-            <label>Projected Resale Price (LKR)</label>
-            <input type="text" inputmode="numeric" id="calcResalePrice" class="custom-input font-mono" placeholder="Enter resale target" oninput="window.formatLiveNumberInput(this); window.recomputeFlip();">
+            <label>Est. Target Resale (LKR)</label>
+            <input type="text" inputmode="numeric" id="calcSellPrice" class="custom-input font-mono" oninput="window.formatLiveNumberInput(this); window.recalcFlipMargin();">
           </div>
 
           <div class="calc-row">
-            <label>Cut & Polish / Detailing (LKR)</label>
-            <input type="text" inputmode="numeric" id="calcDetailingCost" class="custom-input font-mono" value="35,000" oninput="window.formatLiveNumberInput(this); window.recomputeFlip();">
+            <label>Refurbishment & Detailing</label>
+            <input type="text" inputmode="numeric" id="calcRepairs" class="custom-input font-mono" value="45,000" oninput="window.formatLiveNumberInput(this); window.recalcFlipMargin();">
           </div>
 
           <div class="calc-row">
-            <label>Mechanical & Touchup Prep (LKR)</label>
-            <input type="text" inputmode="numeric" id="calcRepairCost" class="custom-input font-mono" value="45,000" oninput="window.formatLiveNumberInput(this); window.recomputeFlip();">
-          </div>
-
-          <div class="calc-row">
-            <label>Transport / Transfer Costs (LKR)</label>
-            <input type="text" inputmode="numeric" id="calcFeeCost" class="custom-input font-mono" value="15,000" oninput="window.formatLiveNumberInput(this); window.recomputeFlip();">
-          </div>
-
-          <div class="calc-row">
-            <label>Total Capital Required (LKR)</label>
-            <input type="text" id="calcTotalInvestment" class="custom-input font-mono" readonly style="background: var(--surface-subtle); font-weight: 600;">
+            <label>Transfer, Fuel & Docs</label>
+            <input type="text" inputmode="numeric" id="calcMisc" class="custom-input font-mono" value="25,000" oninput="window.formatLiveNumberInput(this); window.recalcFlipMargin();">
           </div>
         </div>
 
-        <!-- Profit Calculation Result -->
         <div class="calc-result-banner">
           <div>
-            <div class="stat-label">Estimated Net Margin</div>
+            <div class="stat-label">Net Projected Profit</div>
             <div class="profit-highlight" id="calcNetProfit">Rs. 0</div>
           </div>
-          <div style="text-align: right;">
-            <span class="roi-badge" id="calcRoiBadge">0.0% ROI</span>
-            <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-secondary); margin-top: 0.2rem;">Return on capital</div>
-          </div>
+          <div class="roi-badge" id="calcRoi">0% ROI</div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.25rem;">
-          <button class="btn-secondary" onclick="saveCalculatorToPipeline()">
-            Save to Pipeline
-          </button>
-          <button class="btn-primary" onclick="closeCalcModal()">Done</button>
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+          <button class="btn-secondary" onclick="closeCalcModal()">Close</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: PIPELINE LEAD DETAILS & INSPECTION NOTES -->
-  <div class="modal-backdrop" id="pipelineModal">
-    <div class="modal-box">
-      <div class="modal-header">
-        <h2>Acquisition Record</h2>
-        <button class="modal-close" onclick="closePipelineModal()">×</button>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 0.85rem;">
-        <input type="hidden" id="pipeCarId">
-        
-        <div>
-          <label class="preset-strip-label">Stage:</label>
-          <select id="pipeStage" class="custom-select" style="margin-top: 0.3rem;">
-            <option value="saved">Saved Stock</option>
-            <option value="to_call">Seller Contact</option>
-            <option value="inspecting">Lot Inspection</option>
-            <option value="offered">Negotiation / Offer</option>
-            <option value="detailing">In Prep / Polish</option>
-            <option value="sold">Sold / Realized</option>
-          </select>
-        </div>
-
-        <div class="calc-grid">
-          <div class="calc-row">
-            <label>Seller Phone / WhatsApp</label>
-            <input type="text" id="pipePhone" class="custom-input font-mono" placeholder="07X XXX XXXX">
-          </div>
-          <div class="calc-row">
-            <label>Seller Name / Town</label>
-            <input type="text" id="pipeSellerName" class="custom-input" placeholder="e.g. Kasun (Kurunegala)">
-          </div>
-        </div>
-
-        <div class="calc-grid">
-          <div class="calc-row">
-            <label>Agreed Purchase Price (LKR)</label>
-            <input type="text" inputmode="numeric" id="pipePurchasePrice" class="custom-input font-mono" placeholder="Agreed price" oninput="window.formatLiveNumberInput(this)">
-          </div>
-          <div class="calc-row">
-            <label>Estimated Detailing / Repairs (LKR)</label>
-            <input type="text" inputmode="numeric" id="pipeRepairCost" class="custom-input font-mono" placeholder="Prep estimate" oninput="window.formatLiveNumberInput(this)">
-          </div>
-        </div>
-
-        <div class="calc-row">
-          <label>Inspection Notes & Condition Report</label>
-          <textarea id="pipeNotes" rows="3" class="custom-input" placeholder="Original paint, bumper touchup required, 2nd registered owner..."></textarea>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
-          <button class="btn-secondary" style="color: var(--danger); border-color: var(--border);" onclick="deleteLeadFromPipeline()">Remove Record</button>
-          <div style="display: flex; gap: 0.4rem;">
-            <button class="btn-secondary" onclick="closePipelineModal()">Cancel</button>
-            <button class="btn-primary" onclick="submitPipelineUpdate()">Save Record</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL: EMPTY SCRAPE NOTIFICATION -->
-  <div class="modal-backdrop" id="emptyScrapeModal">
-    <div class="modal-box" style="max-width: 480px;">
-      <div class="modal-header">
-        <h2>No Listings Found</h2>
-        <button class="modal-close" onclick="closeEmptyScrapeModal()">×</button>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 0.85rem;">
-        <p id="emptyScrapeMessage" style="font-size: 0.88rem; color: var(--ink-secondary); line-height: 1.5;">
-          No matching listings were found for your search criteria on the selected portals.
-        </p>
-
-        <div class="notice-banner">
-          <div style="font-size: 0.82rem; color: var(--ink-secondary);">
-            Recommendation: Broaden your search term (e.g. search "Suzuki" instead of a rare trim) or adjust price boundaries.
-          </div>
-        </div>
-
-        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
-          <button class="btn-primary" onclick="closeEmptyScrapeModal()">Acknowledge</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
+  <!-- Core App Entrypoint -->
   <script type="module" src="/static/app.js"></script>
 </body>
 </html>
