@@ -11,18 +11,20 @@
 </head>
 <body>
 
-  <!-- Minimalist Header with Interactive Scout Mascot -->
+  <!-- Minimalist Frosted Glass Header with Authentic Animated Mascot -->
   <header>
     <div class="header-container">
       <div class="logo-wrap">
-        <div id="mascotContainer" class="mascot-avatar" title="Click to greet Scout AI!"></div>
+        <div class="mascot-avatar" title="Lanka Car Hunter Scout">
+          <img src="/static/assets/mascot.svg" alt="Mascot" width="46" height="46">
+        </div>
         <div class="logo-text">
           <h1>Lanka Car Hunter</h1>
           <span>AI Deal Intelligence & Acquisition Deck</span>
         </div>
       </div>
 
-      <!-- Navigation Tabs -->
+      <!-- Floating Glass Navigation Tabs -->
       <div class="nav-tabs">
         <button class="tab-btn active" id="tabDeals" onclick="switchTab('deals')">
           <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
@@ -73,7 +75,7 @@
 
       <div class="stat-card">
         <span class="stat-label">Est. Gross Margin</span>
-        <div class="stat-value signal" id="statPotentialProfit">Rs. 0</div>
+        <div class="stat-value" id="statPotentialProfit">Rs. 0</div>
       </div>
 
       <div class="stat-card">
@@ -84,7 +86,7 @@
 
     <!-- VIEW 1: INVENTORY & DEALS FEED -->
     <div id="viewDeals" class="view-section">
-      <!-- Search & Filters Card -->
+      <!-- Search & Filters Glass Card -->
       <div class="filter-card">
         <!-- Preset Filters -->
         <div class="preset-strip">
@@ -147,8 +149,8 @@
             <option value="Ratnapura">Ratnapura</option>
           </select>
 
-          <input type="text" inputmode="numeric" id="filterMinPrice" class="custom-input font-mono" placeholder="Min Price" oninput="window.formatLiveNumberInput(this)" onchange="loadCars(0)">
-          <input type="text" inputmode="numeric" id="filterMaxPrice" class="custom-input font-mono" placeholder="Max Price" oninput="window.formatLiveNumberInput(this)" onchange="loadCars(0)">
+          <input type="text" inputmode="numeric" id="filterMinPrice" class="custom-input font-mono" placeholder="Min Price (Rs.)" oninput="window.formatLiveNumberInput(this)" onchange="loadCars(0)">
+          <input type="text" inputmode="numeric" id="filterMaxPrice" class="custom-input font-mono" placeholder="Max Price (Rs.)" oninput="window.formatLiveNumberInput(this)" onchange="loadCars(0)">
 
           <select id="filterSource" class="custom-select" onchange="loadCars(0)">
             <option value="">All Portals</option>
@@ -156,8 +158,8 @@
             <option value="ikman">Ikman.lk</option>
           </select>
 
-          <button class="btn-primary" style="padding: 0.55rem 1rem;" onclick="loadCars(0)">Apply</button>
-          <button class="btn-secondary" style="padding: 0.55rem 0.85rem;" onclick="resetFilters()">Reset</button>
+          <button class="btn-primary" style="padding: 0.55rem 1.25rem;" onclick="loadCars(0)">Apply</button>
+          <button class="btn-secondary" style="padding: 0.55rem 1rem;" onclick="resetFilters()">Reset</button>
         </div>
 
         <!-- Valuation Category Pills -->
@@ -303,9 +305,9 @@
     <!-- TAB: SCOUTED INTELLIGENCE DOSSIER -->
     <div id="dossierTabContent" style="display: none; flex-direction: column; gap: 1.5rem;">
       <!-- Dossier Header & Model Switcher -->
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--surface-card); padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--glass-card); backdrop-filter: blur(var(--blur-glass)); -webkit-backdrop-filter: blur(var(--blur-glass)); padding: 1.35rem 1.5rem; border: 1px solid var(--glass-border); border-radius: var(--radius-xl); box-shadow: var(--shadow-glass);">
         <div>
-          <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--ink);">AI Vehicle Deal Dossiers</h2>
+          <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--ink-navy); letter-spacing: -0.02em;">AI Vehicle Deal Dossiers</h2>
           <p style="font-size: 0.85rem; color: var(--ink-secondary); margin-top: 0.25rem;">Real-time market floor intelligence, fuel economy ratings, and flip profit breakdowns</p>
         </div>
         <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -332,7 +334,7 @@
             <h2>Live Verified Listings</h2>
             <span class="feed-count" id="dossierListingsCount">0 active</span>
           </div>
-          <button class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="window.refreshDossierData()">
+          <button class="btn-secondary" style="padding: 0.4rem 0.85rem; font-size: 0.8rem;" onclick="window.refreshDossierData()">
             <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             Refresh Liveness
           </button>
@@ -373,7 +375,7 @@
           <label class="preset-strip-label">Pages to Scrape per Portal:</label>
           <div style="display: flex; align-items: center; gap: 1rem; margin-top: 0.4rem;">
             <input type="range" id="scrapePagesSlider" min="1" max="8" value="3" oninput="document.getElementById('scrapePagesVal').innerText = this.value + ' pages'">
-            <span id="scrapePagesVal" class="font-mono" style="font-size: 0.85rem; font-weight: 600; color: var(--signal); min-width: 60px;">3 pages</span>
+            <span id="scrapePagesVal" class="font-mono" style="font-size: 0.85rem; font-weight: 600; color: var(--ink-navy); min-width: 60px;">3 pages</span>
           </div>
         </div>
 
@@ -385,8 +387,8 @@
         <!-- Terminal Log Feed -->
         <div id="scrapeLogSection" style="display: none; flex-direction: column; gap: 0.4rem;">
           <div style="display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem;">
-            <span id="scrapeCurrentStep" style="color: var(--ink);">Processing request</span>
-            <span id="scrapePercent" style="color: var(--signal);">0%</span>
+            <span id="scrapeCurrentStep" style="color: var(--ink-navy);">Processing request</span>
+            <span id="scrapePercent" style="color: var(--ink-navy); font-weight:700;">0%</span>
           </div>
           <div class="progress-bar-wrap">
             <div class="progress-bar-fill" id="scrapeProgressBar"></div>
@@ -458,7 +460,7 @@
 
         <div>
           <label class="stat-label">Mechanic / Inspection Notes</label>
-          <textarea id="pipeNotes" class="custom-input" rows="3" placeholder="Condition of tires, battery health, exterior touch-up requirements..." style="margin-top: 0.3rem; resize: vertical;"></textarea>
+          <textarea id="pipeNotes" class="custom-input" rows="3" placeholder="Condition of tires, battery health, exterior touch-up requirements..." style="margin-top: 0.3rem; resize: vertical; border-radius: var(--radius-md);"></textarea>
         </div>
 
         <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
