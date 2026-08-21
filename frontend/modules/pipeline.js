@@ -4,9 +4,9 @@ import { formatLKR, parseFormattedNumber } from '../app.js';
 export async function loadPipeline() {
   const stages = ['saved', 'to_call', 'inspecting', 'offered', 'detailing', 'sold'];
   stages.forEach(s => {
-    const col = document.getElementById(`col-${s}`);
+    const col = document.getElementById(`stage_${s}`);
     if (col) col.innerHTML = `<div class="font-mono" style="font-size:0.75rem; color:var(--ink-secondary); text-align:center; padding: 1rem;">Loading...</div>`;
-    const badge = document.getElementById(`badge-${s}`);
+    const badge = document.getElementById(`count_${s}`);
     if (badge) badge.innerText = '0';
   });
 
@@ -24,10 +24,10 @@ export async function loadPipeline() {
 
     stages.forEach(s => {
       const items = grouped[s];
-      const badge = document.getElementById(`badge-${s}`);
+      const badge = document.getElementById(`count_${s}`);
       if (badge) badge.innerText = items.length;
-      
-      const col = document.getElementById(`col-${s}`);
+
+      const col = document.getElementById(`stage_${s}`);
       if (!col) return;
 
       if (items.length === 0) {

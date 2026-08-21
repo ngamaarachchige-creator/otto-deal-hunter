@@ -300,8 +300,6 @@ export async function loadCars(offset = 0) {
     currentFetchController.abort();
   }
   currentFetchController = new AbortController();
-  currentOffset = offset;
-  const grid = document.getElementById('carGrid');
   grid.innerHTML = `<div class="empty-state" style="grid-column: 1/-1;"><p class="font-mono" style="font-size:0.85rem;">Retrieving active inventory...</p></div>`;
 
   try {
@@ -542,9 +540,36 @@ window.refreshDossierData = async function() {
   mod.refreshDossierData();
 };
 
-// Initialization
-document.addEventListener('DOMContentLoaded', () => {
-  mascot = new ScoutMascot('mascotContainer');
+// Global Window Bindings for Inline Handlers
+window.loadCars = loadCars;
+window.loadStats = loadStats;
+window.switchTab = switchTab;
+window.applyPreset = applyPreset;
+window.setDealFilter = setDealFilter;
+window.resetFilters = resetFilters;
+window.changePage = changePage;
+window.exportData = exportData;
+window.executeNLUSearch = executeNLUSearch;
+window.handleSearchInput = handleSearchInput;
+window.handleSearchKey = handleSearchKey;
+window.clearSearchQuery = clearSearchQuery;
+window.removeNLUFilter = removeNLUFilter;
+window.toggleMobileFilters = toggleMobileFilters;
+window.formatLiveNumberInput = formatLiveNumberInput;
+
+// Robust App Initialization
+function initializeApp() {
+  try {
+    mascot = new ScoutMascot('mascotContainer');
+  } catch (e) {
+    console.warn('Mascot init fallback:', e);
+  }
   loadStats();
   loadCars(0);
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+  initializeApp();
+}
