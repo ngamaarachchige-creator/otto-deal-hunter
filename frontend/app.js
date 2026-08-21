@@ -551,7 +551,13 @@ export async function openAiInspectModal(carId) {
   const car = cars.find(c => c.id === carId);
   const imgHtml = car && car.image_url ? `<img src="${car.image_url}" style="width:100%; border-radius:12px; margin-bottom:1.25rem; max-height:220px; object-fit:cover; border:1px solid var(--line);">` : '';
 
-  body.innerHTML = `${imgHtml}<span class="font-mono" style="color: var(--ink-secondary);">Asking OTTO AI to look this one over…</span>`;
+  body.innerHTML = `${imgHtml}
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 2rem 0;">
+    <div class="loader" style="width: 24px; height: 24px; border: 3px solid var(--line); border-top-color: var(--ink); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+    <span class="font-mono" style="color: var(--ink-secondary); font-size: 0.9rem;">OTTO is thinking...</span>
+  </div>
+  <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+`;
 
   try {
     const res = await fetch(`/api/ai/inspect/${carId}`, { method: 'POST' });
