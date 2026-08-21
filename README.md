@@ -1,4 +1,4 @@
-# 🚗 OTTO · Autonomous Vehicle Acquisition & Deal Deck
+# 🚗 OTTO · The unfair advantage in the Lankan car market
 
 Automated automotive arbitrage and vehicle deal acquisition intelligence platform for Sri Lanka. Scrapes and tracks real-time market data across **Riyasewana** and **Ikman.lk**, benchmarks statistical floor averages, flags underpriced deals (>15% below market), and manages an interactive 6-stage flip CRM pipeline.
 
