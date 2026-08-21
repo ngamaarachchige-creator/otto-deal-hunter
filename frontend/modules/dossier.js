@@ -1,6 +1,7 @@
 // Dynamic Module: Scouted Intelligence & Vehicle Dossiers
 import { formatLKR, switchTab } from '../app.js';
 import { icon, liquidityIcon, starRow } from './icons.js';
+import { escapeHtml } from './sanitize.js';
 
 const TIER_BADGE_CLASS = {
   1: 'liquidity-tier-1',
@@ -245,8 +246,8 @@ async function fetchAndRenderDossierListings(data) {
       const isColombo = (car.district || '').toLowerCase().includes('colombo') || (car.location || '').toLowerCase().includes('colombo');
       const isUnpriced = car.is_negotiable || car.price <= 0;
 
-      const imageHtml = car.image_url 
-        ? `<img src="${car.image_url}" alt="${car.title}" class="car-img" onerror="this.outerHTML='<div class=\\'car-img-fallback\\'>NO PREVIEW</div>'">`
+      const imageHtml = car.image_url
+        ? `<img src="${escapeHtml(car.image_url)}" alt="${escapeHtml(car.title)}" class="car-img" onerror="this.outerHTML='<div class=\\'car-img-fallback\\'>NO PREVIEW</div>'">`
         : `<div class="car-img-fallback">NO PREVIEW</div>`;
 
       // Conservative buy/resale math
@@ -264,9 +265,9 @@ async function fetchAndRenderDossierListings(data) {
 
           <div class="car-card-body">
             <div>
-              <h3 class="car-title" title="${car.title}">${car.title}</h3>
+              <h3 class="car-title" title="${escapeHtml(car.title)}">${escapeHtml(car.title)}</h3>
               <div class="car-meta-line" style="margin-top: 0.35rem;">
-                <span>${car.district || car.location || 'Sri Lanka'}</span>
+                <span>${escapeHtml(car.district || car.location || 'Sri Lanka')}</span>
                 ${car.year ? `<span>· ${car.year}</span>` : ''}
                 ${car.mileage_display ? `<span>· ${car.mileage_display}</span>` : ''}
               </div>
@@ -297,7 +298,7 @@ async function fetchAndRenderDossierListings(data) {
             </div>
 
             <div class="car-actions">
-              <a href="${car.url}" target="_blank" rel="noopener" class="btn-card-link">
+              <a href="${escapeHtml(car.url)}" target="_blank" rel="noopener" class="btn-card-link">
                 View Ad
                 <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
               </a>

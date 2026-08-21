@@ -1,15 +1,26 @@
 // Dynamic Module: Market Trends & Valuation Index
 import { formatLKR, switchTab, loadCars } from '../app.js';
 import { liquidityIcon } from './icons.js';
+import { escapeHtml } from './sanitize.js';
 
 let currentMarketOffset = 0;
 const marketLimit = 20;
+let delegatedClickBound = false;
 
 export async function loadMarketTrends(offset = 0) {
   currentMarketOffset = offset;
   const tbody = document.getElementById('marketTableBody');
   if (tbody) {
     tbody.innerHTML = `<tr><td colspan="7" class="font-mono" style="text-align:center; padding: 2rem; color: var(--ink-secondary);">Analyzing market database benchmarks...</td></tr>`;
+    // Delegated once: reads make/model from data-* attributes as plain strings,
+    // rather than interpolating scraped text into an inline onclick JS string.
+    if (!delegatedClickBound) {
+      tbody.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-make]');
+        if (btn) searchSpecificModel(btn.dataset.make, btn.dataset.model);
+      });
+      delegatedClickBound = true;
+    }
   }
 
   try {
@@ -37,7 +48,7 @@ export async function loadMarketTrends(offset = 0) {
 
     tbody.innerHTML = trends.map(t => `
       <tr>
-        <td><strong>${t.make} ${t.model}</strong></td>
+        <td><strong>${escapeHtml(t.make)} ${escapeHtml(t.model)}</strong></td>
         <td class="font-mono">${t.avg_year || 'N/A'}</td>
         <td class="font-mono" style="font-weight: 700; color: var(--signal);">${formatLKR(t.avg_price)}</td>
         <td class="font-mono" style="color: var(--success);">${formatLKR(t.min_price)}</td>
@@ -47,7 +58,7 @@ export async function loadMarketTrends(offset = 0) {
         </td>
         <td class="font-mono">${t.total_ads} ads</td>
         <td>
-          <button class="btn-secondary" style="padding:0.3rem 0.65rem; font-size:0.75rem;" onclick="window.searchSpecificModel('${t.make}', '${t.model}')">
+          <button class="btn-secondary" style="padding:0.3rem 0.65rem; font-size:0.75rem;" data-make="${escapeHtml(t.make)}" data-model="${escapeHtml(t.model)}">
             View Inventory
           </button>
         </td>

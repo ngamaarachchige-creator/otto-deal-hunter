@@ -1,5 +1,6 @@
 // Dynamic Module: Acquisition Pipeline Kanban Board
 import { formatLKR, parseFormattedNumber } from '../app.js';
+import { escapeHtml } from './sanitize.js';
 
 export async function loadPipeline() {
   const stages = ['saved', 'to_call', 'inspecting', 'offered', 'detailing', 'sold'];
@@ -40,19 +41,19 @@ export async function loadPipeline() {
         col.innerHTML = items.map(l => `
           <div class="pipeline-card">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.4rem;">
-              <strong style="font-size:0.85rem; line-height:1.3; color:var(--ink);">${l.title}</strong>
-              <span class="badge-source" style="position:static; font-size:0.65rem; padding:0.15rem 0.35rem;">${l.source}</span>
+              <strong style="font-size:0.85rem; line-height:1.3; color:var(--ink);">${escapeHtml(l.title)}</strong>
+              <span class="badge-source" style="position:static; font-size:0.65rem; padding:0.15rem 0.35rem;">${escapeHtml(l.source)}</span>
             </div>
             <div style="display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:0.78rem; color:var(--ink-secondary);">
               <span>${l.price > 0 ? formatLKR(l.price) : 'Price on request'}</span>
-              <span>${l.district || l.location || 'Sri Lanka'}</span>
+              <span>${escapeHtml(l.district || l.location || 'Sri Lanka')}</span>
             </div>
-            ${l.seller_phone ? `<div class="font-mono" style="font-size:0.75rem; color:var(--signal); font-weight:600;">Tel: ${l.seller_phone} ${l.seller_name ? `(${l.seller_name})` : ''}</div>` : ''}
-            ${l.pipeline_notes ? `<div style="font-size:0.75rem; color:var(--ink-secondary); background:var(--surface-subtle); padding:0.4rem; border-radius:4px; border:1px solid var(--border);">Note: ${l.pipeline_notes}</div>` : ''}
+            ${l.seller_phone ? `<div class="font-mono" style="font-size:0.75rem; color:var(--signal); font-weight:600;">Tel: ${escapeHtml(l.seller_phone)} ${l.seller_name ? `(${escapeHtml(l.seller_name)})` : ''}</div>` : ''}
+            ${l.pipeline_notes ? `<div style="font-size:0.75rem; color:var(--ink-secondary); background:var(--surface-subtle); padding:0.4rem; border-radius:4px; border:1px solid var(--border);">Note: ${escapeHtml(l.pipeline_notes)}</div>` : ''}
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.25rem; padding-top:0.35rem; border-top:1px solid var(--border);">
               <button class="btn-card-calc" style="padding:0.3rem 0.5rem; font-size:0.72rem;" onclick="window.openCalcModal(${l.id})">Calculator</button>
               <button class="btn-card-track" style="padding:0.3rem 0.5rem; font-size:0.72rem;" onclick="window.openPipelineModal(${l.id})">Edit</button>
-              <a href="${l.url}" target="_blank" rel="noopener" class="btn-card-link" style="padding:0.3rem 0.45rem; font-size:0.72rem;">↗</a>
+              <a href="${escapeHtml(l.url)}" target="_blank" rel="noopener" class="btn-card-link" style="padding:0.3rem 0.45rem; font-size:0.72rem;">↗</a>
             </div>
           </div>
         `).join('');

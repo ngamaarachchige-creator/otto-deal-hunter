@@ -1,5 +1,6 @@
 // Dynamic Module: Flip Detailing & Repair Calculator
 import { formatLKR, parseFormattedNumber } from '../app.js';
+import { escapeHtml } from './sanitize.js';
 
 let activeCalcCar = null;
 
@@ -15,12 +16,12 @@ export function openCalcModal(carId, currentCars) {
   document.getElementById('calcCarSummary').innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center;">
       <div>
-        <strong style="font-size:0.95rem; color:var(--ink);">${car.title}</strong>
+        <strong style="font-size:0.95rem; color:var(--ink);">${escapeHtml(car.title)}</strong>
         <div class="font-mono" style="color:var(--ink-secondary); font-size:0.75rem; margin-top:2px;">
-          ${car.district || car.location} · Year: ${car.year || 'N/A'} · Stated: ${isUnpriced ? 'Price on request' : car.price_display}
+          ${escapeHtml(car.district || car.location)} · Year: ${car.year || 'N/A'} · Stated: ${isUnpriced ? 'Price on request' : escapeHtml(car.price_display)}
         </div>
       </div>
-      <span class="badge-source" style="position:static;">${car.source}</span>
+      <span class="badge-source" style="position:static;">${escapeHtml(car.source)}</span>
     </div>
   `;
 
