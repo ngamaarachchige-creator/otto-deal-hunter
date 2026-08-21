@@ -81,8 +81,7 @@ body::before {
 /* Header with Magical Frosted Glass */
 header {
   background: rgba(249, 249, 249, 0.8);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
+  
   border-bottom: 1px solid rgba(227, 229, 234, 0.8);
   position: sticky;
   top: 0;
@@ -155,8 +154,7 @@ header {
   align-items: center;
   gap: 0.35rem;
   background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  
   padding: 0.25rem;
   border-radius: var(--radius-pill);
   border: 1px solid var(--glass-border-subtle);
@@ -284,9 +282,7 @@ header {
 }
 
 .stat-card {
-  background: var(--glass-card);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
+  background: #ffffff;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: 1.25rem 1.45rem;
@@ -324,9 +320,7 @@ header {
 
 /* Frosted Glass Filter Card */
 .filter-card {
-  background: var(--glass-card);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
+  background: #ffffff;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   padding: 1.35rem;
@@ -504,8 +498,7 @@ header {
   background-repeat: no-repeat;
   background-position: right 1rem center;
   background-size: 11px;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
   padding: 0.6rem 2.25rem 0.6rem 1rem;
@@ -534,8 +527,7 @@ header {
 
 .custom-input {
   background-color: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
   padding: 0.6rem 1rem;
@@ -645,9 +637,7 @@ header {
 }
 
 .car-card {
-  background: var(--glass-card);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
+  background: #ffffff;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   overflow: hidden;

@@ -59,7 +59,17 @@ def compute_liquidity_tier(make: str, model: str, body_type: str = "", year: int
         "tag": "⏳ 45+d Turnover"
     }
 
-def calculate_market_benchmarks() -> Dict[str, Dict[str, Any]]:
+_benchmark_cache = None
+_benchmark_cache_time = 0
+BENCHMARK_CACHE_TTL = 45.0  # seconds
+
+def calculate_market_benchmarks(force_refresh: bool = False) -> Dict[str, Dict[str, Any]]:
+    global _benchmark_cache, _benchmark_cache_time
+    import time
+    now = time.time()
+    if not force_refresh and _benchmark_cache is not None and (now - _benchmark_cache_time < BENCHMARK_CACHE_TTL):
+        return _benchmark_cache
+
     """
     Computes statistical benchmarks (average, min, max, count) grouped by (Make, Model, Year)
     and (Make, Model) across the database. Excludes unpriced/zero-price records.

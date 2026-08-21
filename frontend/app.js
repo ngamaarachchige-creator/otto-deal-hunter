@@ -122,6 +122,7 @@ export async function loadStats() {
       }
     }
   } catch (e) {
+    if (e.name === 'AbortError') return;
     console.error('Error fetching stats:', e);
   }
 }
@@ -288,14 +289,24 @@ export function getFilterParams(offset = 0) {
 }
 
 // Load Cars Feed
+let currentFetchController = null;
+
 export async function loadCars(offset = 0) {
+  currentOffset = offset;
+  const grid = document.getElementById('carGrid');
+  if (!grid) return;
+
+  if (currentFetchController) {
+    currentFetchController.abort();
+  }
+  currentFetchController = new AbortController();
   currentOffset = offset;
   const grid = document.getElementById('carGrid');
   grid.innerHTML = `<div class="empty-state" style="grid-column: 1/-1;"><p class="font-mono" style="font-size:0.85rem;">Retrieving active inventory...</p></div>`;
 
   try {
     const params = getFilterParams(offset);
-    const res = await fetch(`/api/cars?${params.toString()}`);
+    const res = await fetch(`/api/cars?${params.toString()}`, { signal: currentFetchController.signal });
     const data = await res.json();
     currentCars = data.items || [];
 
@@ -328,6 +339,7 @@ export async function loadCars(offset = 0) {
 
     grid.innerHTML = currentCars.map(c => renderCarCard(c)).join('');
   } catch (e) {
+    if (e.name === 'AbortError') return;
     grid.innerHTML = `<div class="empty-state" style="grid-column: 1/-1;"><p style="color: var(--danger);">Failed to load listings: ${e.message}</p></div>`;
   }
 }
