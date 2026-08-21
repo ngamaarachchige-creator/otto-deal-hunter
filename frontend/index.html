@@ -531,6 +531,57 @@
     </div>
   </div>
 
+  <!-- Floating Copilot Trigger Button -->
+  <button class="copilot-floating-trigger" id="ottoCopilotTrigger" title="Ask OTTO Copilot (Cmd+K)">
+    <div class="trigger-avatar">
+      <img src="/static/assets/mascot.svg" alt="OTTO" width="34" height="34">
+      <span class="trigger-ping-dot"></span>
+    </div>
+    <span class="trigger-label">Ask OTTO</span>
+  </button>
+
+  <!-- Slide-Over Copilot Drawer -->
+  <div class="copilot-panel-backdrop" id="ottoCopilotBackdrop" onclick="window.closeCopilot()"></div>
+  <aside class="copilot-panel" id="ottoCopilotPanel" aria-label="OTTO Deal Copilot">
+    <div class="copilot-header">
+      <div class="copilot-header-brand">
+        <img src="/static/assets/mascot.svg" alt="OTTO Mascot" width="32" height="32">
+        <div>
+          <div class="copilot-title">OTTO Copilot</div>
+          <div class="copilot-subtitle"><span class="status-dot"></span> qwen3-vl:8b (LAN Active)</div>
+        </div>
+      </div>
+      <div class="copilot-header-actions">
+        <span class="copilot-kbd-shortcut">Cmd+K</span>
+        <button class="copilot-close-btn" id="ottoCopilotClose" aria-label="Close Copilot">✕</button>
+      </div>
+    </div>
+
+    <div class="copilot-chips-bar">
+      <button class="copilot-chip" data-prompt="Scout top Celerios under 4M">⚡ Top Celerios</button>
+      <button class="copilot-chip" data-prompt="Find highest margin Aquas">🔥 High Margin Aquas</button>
+      <button class="copilot-chip" data-prompt="Find underpriced Wagon R deals">🔎 Wagon R Deals</button>
+    </div>
+
+    <div class="copilot-feed" id="ottoCopilotFeed">
+      <div class="copilot-msg agent-msg">
+        <div class="agent-avatar">
+          <img src="/static/assets/mascot.svg" alt="OTTO" width="28" height="28">
+        </div>
+        <div class="agent-body">
+          <p>Hey! I'm <strong>OTTO</strong>, your autonomous vehicle acquisition scout. Ask me to scan for specific models, find high-margin flip deals, or analyze market prices.</p>
+        </div>
+      </div>
+    </div>
+
+    <form class="copilot-input-bar" id="ottoCopilotForm">
+      <input type="text" id="ottoCopilotInput" class="copilot-input" placeholder="Ask OTTO to scout deals, check prices..." autocomplete="off">
+      <button type="submit" id="ottoCopilotSubmit" class="copilot-submit" aria-label="Send Message">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </form>
+  </aside>
+
   <!-- Core App Entrypoint -->
   <script type="module" src="/static/app.js"></script>
 </body>
