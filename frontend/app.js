@@ -547,15 +547,32 @@ export async function openAiInspectModal(carId) {
   const body = document.getElementById('aiInspectBody');
   if (!modal || !body) return;
   modal.classList.add('active');
-  body.innerHTML = `<span class="font-mono" style="color: var(--ink-secondary);">Asking OTTO AI to look this one over…</span>`;
+  
+  const car = cars.find(c => c.id === carId);
+  const imgHtml = car && car.image_url ? `<img src="${car.image_url}" style="width:100%; border-radius:12px; margin-bottom:1.25rem; max-height:220px; object-fit:cover; border:1px solid var(--line);">` : '';
+
+  body.innerHTML = `${imgHtml}<span class="font-mono" style="color: var(--ink-secondary);">Asking OTTO AI to look this one over…</span>`;
 
   try {
     const res = await fetch(`/api/ai/inspect/${carId}`, { method: 'POST' });
     if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
     const data = await res.json();
-    body.innerText = data.analysis || 'No response from AI assistant.';
+    
+    let formattedText = data.analysis || 'No response from AI assistant.';
+    formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    formattedText = formattedText.replace(/^\*\s+(.*$)/gim, '<li style="margin-bottom:0.4rem;">$1</li>');
+    if (formattedText.includes('<li')) {
+      formattedText = formattedText.replace(/(<li.*<\/li>)/s, '<ul style="padding-left:1.2rem; margin-top:0.5rem; margin-bottom:1rem;">$1</ul>');
+    }
+    formattedText = formattedText.split('\n\n').filter(p => p.trim() !== '').map(p => {
+        if(p.includes('<ul')) return p;
+        return `<p style="margin-bottom:0.75rem;">${p.trim()}</p>`;
+    }).join('');
+
+    body.innerHTML = `${imgHtml}<div style="font-size: 0.95rem; line-height: 1.6; color: var(--ink-navy);">${formattedText}</div>`;
   } catch (e) {
-    body.innerHTML = `<span style="color: var(--danger);">Couldn't reach OTTO AI: ${e.message}</span>`;
+    body.innerHTML = `${imgHtml}<span style="color: var(--danger);">Couldn't reach OTTO AI: ${e.message}</span>`;
   }
 }
 export function closeAiInspectModal() {

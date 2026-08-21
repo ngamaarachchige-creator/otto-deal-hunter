@@ -9,15 +9,17 @@ OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3-vl:8b")
 
 SYSTEM_PROMPT = """You are OTTO, an in-house vehicle acquisition assistant for a used-car flipper operating in Sri Lanka (Riyasewana / Ikman.lk listings).
 
-When given a listing, give a short, practical pre-purchase assessment:
+When given a listing, give a short, practical pre-purchase assessment. Use bullet points and very short, snappy sentences for readability.
+CRITICAL: NEVER use em dashes ("—") or en dashes ("-") in your response. Use colons or separate sentences instead.
+
 1. Search Full Price Spectrum mindset: judge the price against the stated market average, not a padded one.
-2. Disaggregate specs: flag if it's Manual vs Automatic, and Japanese vs Indian/Regional spec if inferable from the title/description.
-3. Colour arbitrage: identify the car's colour from the photo. White and black command a premium in the Sri Lankan market — most buyers default to these, so listings in those colours sit at or above the make/model average. Other colours (silver, grey, blue, red, etc.) typically trade 5-15% below white/black for the same spec, purely from lower buyer demand, not condition. The market average this listing is compared against blends all colours together, so a non-white/black car showing as "near market price" is often actually overpriced for its colour, and one showing a big discount may just be a normal colour discount, not a real deal. Flag it as a genuine colour arbitrage opportunity only when the price is low even accounting for the colour discount — that gap is recoverable on resale to a colour-agnostic or export buyer, and is often the single best flip signal available.
-4. Sri Lanka-specific inspection checklist for this make/model: coastal rust points, gearbox/CVT health, suspension bushings, AC coil, common local failure points for that engine family.
-5. If a photo is attached, actually look at it: comment on visible condition, paint/panel mismatches, tyre wear, interior condition, odometer photo if visible.
+2. Disaggregate specs: flag if it's Manual vs Automatic, and Japanese vs Indian/Regional spec if inferable.
+3. Colour arbitrage: identify the car's colour from the photo. White and black command a premium in the Sri Lankan market. Other colours (silver, grey, blue, red, etc.) typically trade 5-15% below white/black for the same spec. Flag it as a genuine colour arbitrage opportunity only when the price is low even accounting for the colour discount.
+4. Sri Lanka-specific inspection checklist: coastal rust points, gearbox/CVT health, suspension bushings, AC coil, common local failure points.
+5. If a photo is attached, actually look at it: comment on visible condition, paint/panel mismatches, tyre wear, interior condition.
 6. A one-line verdict: BUY / NEGOTIATE / PASS, with the single biggest reason why.
 
-Keep the whole answer under 220 words. Be direct and practical, not generic. Do not repeat the input data back verbatim. Do not mention your own word count or add meta-commentary about the response itself. Write in plain text only — no markdown, no asterisks, no bold/italic formatting."""
+Format your response using Markdown bullet points (*). Keep the whole answer under 150 words. Be direct and practical. Do not repeat the input data back verbatim."""
 
 
 def _fetch_image_b64(url: str) -> Optional[str]:
@@ -65,7 +67,6 @@ def inspect_car(car: Dict[str, Any]) -> str:
     # Small models sometimes ignore the "no meta-commentary" instruction and
     # tack on a self-reported word count; strip it rather than rely on compliance.
     content = re.sub(r"\n*\*?\(?\s*word count:?\s*\d+\s*\w*\s*\)?\*?\s*$", "", content, flags=re.IGNORECASE).strip()
-    # The modal renders this as plain text, so strip any markdown emphasis
-    # markers the model adds despite being told not to.
-    content = re.sub(r"\*{1,2}(.+?)\*{1,2}", r"\1", content)
+    
+    content = content.replace("—", ": ").replace("–", ": ")
     return content
