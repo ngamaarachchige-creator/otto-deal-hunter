@@ -1,8 +1,10 @@
+import { initCopilot } from './modules/copilot.js';
 // Lanka Car Hunter · Main Application Controller
 
 import { parseNaturalLanguageQuery, renderParsedChips } from './modules/nluSearch.js';
 import { ScoutMascot } from './modules/mascot.js';
 import { icon, liquidityIcon } from './modules/icons.js';
+import { escapeHtml } from './modules/sanitize.js';
 
 let currentCars = [];
 let currentOffset = 0;
@@ -358,8 +360,8 @@ function renderCarCard(car) {
     dealBadgeHtml = `<span class="badge-deal unpriced">PRICE ON REQUEST</span>`;
   }
 
-  const mediaHtml = car.image_url 
-    ? `<img src="${car.image_url}" alt="${car.title}" class="car-img" loading="lazy" onerror="this.outerHTML='<div class=\\'car-img-fallback\\'>Image Unavailable</div>'">`
+  const mediaHtml = car.image_url
+    ? `<img src="${escapeHtml(car.image_url)}" alt="${escapeHtml(car.title)}" class="car-img" loading="lazy" onerror="this.outerHTML='<div class=\\'car-img-fallback\\'>Image Unavailable</div>'">`
     : `<div class="car-img-fallback">No Preview Image</div>`;
 
   let priceHtml = '';
@@ -387,16 +389,16 @@ function renderCarCard(car) {
   return `
     <div class="car-card ${isHot ? 'hot-deal' : ''}">
       <div class="car-media">
-        <span class="badge-source">${car.source.toUpperCase()}</span>
+        <span class="badge-source">${escapeHtml(car.source.toUpperCase())}</span>
         ${dealBadgeHtml}
         ${mediaHtml}
       </div>
       <div class="car-card-body">
-        <h3 class="car-title">${car.title}</h3>
+        <h3 class="car-title">${escapeHtml(car.title)}</h3>
         <div class="car-meta-line">
           ${car.year ? `<span>${car.year}</span> • ` : ''}
           ${car.mileage_km ? `<span>${car.mileage_km.toLocaleString()} km</span> • ` : ''}
-          <span>${car.location || car.district || 'Sri Lanka'}</span>
+          <span>${escapeHtml(car.location || car.district || 'Sri Lanka')}</span>
         </div>
         ${liquidityBadge ? `<div style="margin-top: -0.25rem;">${liquidityBadge}</div>` : ''}
         ${flipBoxHtml}
@@ -413,7 +415,7 @@ function renderCarCard(car) {
           ` : ''}
         </div>
         <div class="car-actions">
-          <a href="${car.url}" target="_blank" rel="noopener noreferrer" class="btn-card-link">
+          <a href="${escapeHtml(car.url)}" target="_blank" rel="noopener noreferrer" class="btn-card-link">
             <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
             View Ad
           </a>
@@ -512,6 +514,10 @@ window.closeScrapeModal = async function() {
   const mod = await getScraperModule();
   mod.closeScrapeModal();
 };
+window.startScrapingJob = async function() {
+  const mod = await getScraperModule();
+  mod.startScrapingJob();
+};
 window.openTrackPipelineModal = async function(carId) {
   const mod = await getPipelineModule();
   mod.openTrackPipelineModal(carId);
@@ -549,7 +555,7 @@ export async function openAiInspectModal(carId) {
   modal.classList.add('active');
   
   const car = currentCars.find(c => c.id === carId);
-  const imgHtml = car && car.image_url ? `<img src="${car.image_url}" style="width:100%; border-radius:12px; margin-bottom:1.25rem; max-height:220px; object-fit:cover; border:1px solid var(--line);">` : '';
+  const imgHtml = car && car.image_url ? `<img src="${escapeHtml(car.image_url)}" style="width:100%; border-radius:12px; margin-bottom:1.25rem; max-height:220px; object-fit:cover; border:1px solid var(--line);">` : '';
 
   body.innerHTML = `${imgHtml}
   <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 2rem 0;">
@@ -611,6 +617,7 @@ function initializeApp() {
   } catch (e) {
     console.warn('Mascot init fallback:', e);
   }
+  try { initCopilot(); } catch(e) { console.warn('Copilot init error:', e); }
   loadStats();
   loadCars(0);
 }
