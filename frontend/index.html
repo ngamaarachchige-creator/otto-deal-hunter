@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lanka Car Hunter · Vehicle Acquisition & Deal Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header>
+    <div class="header-container">
+      <div class="logo-wrap">
+        <div class="brand-mark" aria-hidden="true">
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+        </div>
+        <div class="logo-text">
+          <h1>LANKA CAR HUNTER</h1>
+          <span>Vehicle Acquisition & Deal Deck · Sri Lanka</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="nav-tabs">
+        <button class="tab-btn active" id="tabDeals" onclick="switchTab('deals')">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+          Inventory & Feed
+        </button>
+        <button class="tab-btn" id="tabPipeline" onclick="switchTab('pipeline')">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          Flip Pipeline <span id="pipelineCountBadge" class="tab-counter" style="display:none;">0</span>
+        </button>
+        <button class="tab-btn" id="tabMarket" onclick="switchTab('market')">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
+          Market Valuation Index
+        </button>
+        <button class="tab-btn" id="tabDossier" onclick="switchTab('dossier')">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          Scouted Intelligence
+        </button>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="header-actions">
+        <button class="btn-secondary" onclick="exportData()" title="Download CSV file">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Export CSV
+        </button>
+        <button class="btn-primary" onclick="openScrapeModal()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          Fetch Market Ads
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Body -->
+  <main class="main-content">
+
+    <!-- KPI Deck Summary -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-label">Indexed Vehicles</span>
+        <div class="stat-value" id="statTotalCars">0</div>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Underpriced Opportunities</span>
+        <div class="stat-value success" id="statHotDeals">0</div>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Estimated Gross Margin</span>
+        <div class="stat-value signal" id="statPotentialProfit">Rs. 0</div>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Active Acquisition Leads</span>
+        <div class="stat-value" id="statActiveLeads">0</div>
+      </div>
+    </div>
+
+    <!-- VIEW 1: INVENTORY & DEALS FEED -->
+    <div id="viewDeals" class="view-section">
+      <!-- Search & Filters Card -->
+      <div class="filter-card">
+        <!-- Preset Filters -->
+        <div class="preset-strip">
+          <span class="preset-strip-label">Quick Filters:</span>
+          <button class="preset-chip active" onclick="applyPreset('all', this)">All Stock</button>
+          <button class="preset-chip" onclick="applyPreset('hot', this)">Underpriced Flips</button>
+          <button class="preset-chip" onclick="applyPreset('alto', this)">Suzuki Alto</button>
+          <button class="preset-chip" onclick="applyPreset('wagonr', this)">Suzuki Wagon R</button>
+          <button class="preset-chip" onclick="applyPreset('vitz_aqua', this)">Toyota Vitz / Aqua</button>
+          <button class="preset-chip" onclick="applyPreset('budget', this)">Under 3.5M LKR</button>
+          <button class="preset-chip" onclick="applyPreset('colombo', this)">Western Province</button>
+        </div>
+
+        <!-- Smart NLU Search Bar -->
+        <div class="nlu-search-container">
+          <div class="nlu-search-wrap">
+            <svg class="nlu-search-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input type="text" id="filterQuery" class="nlu-search-input" placeholder="Search naturally (e.g. 'Toyota aqua 2019', '2015 celerio in colombo under 5.5m', 'swift 2010')..." onkeyup="handleSearchKey(event)" oninput="handleSearchInput(event)">
+            <button type="button" id="clearSearchBtn" class="nlu-clear-btn" style="display:none;" onclick="clearSearchQuery()">×</button>
+          </div>
+          <button class="btn-primary nlu-search-btn" onclick="executeNLUSearch()">Search</button>
+          <button class="btn-secondary mobile-filter-toggle-btn" onclick="toggleMobileFilters()">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+            <span id="filterToggleText">Filters</span>
+          </button>
+        </div>
+
+        <!-- Dynamic NLU Parsed Filter Chips -->
+        <div id="nluChipsContainer" class="nlu-chips-row" style="display: none;">
+          <!-- Dynamically injected NLU Chips -->
+        </div>
+
+        <!-- Detailed Filter Selects Drawer -->
+        <div class="filters-row" id="filtersDrawer">
+          <select id="filterMake" class="custom-select" onchange="loadCars(0)">
+            <option value="">All Makes</option>
+            <option value="Suzuki">Suzuki</option>
+            <option value="Toyota">Toyota</option>
+            <option value="Nissan">Nissan</option>
+            <option value="Honda">Honda</option>
+            <option value="Daihatsu">Daihatsu</option>
+            <option value="Mitsubishi">Mitsubishi</option>
+            <option value="Mazda">Mazda</option>
+            <option value="Hyundai">Hyundai</option>
+            <option value="Kia">Kia</option>
+            <option value="Micro">Micro</option>
+            <option value="Perodua">Perodua</option>
+          </select>
+
+          <select id="filterDistrict" class="custom-select" onchange="loadCars(0)">
+            <option value="">All Districts</option>
+            <option value="Colombo">Colombo</option>
+            <option value="Gampaha">Gampaha</option>
+            <option value="Kalutara">Kalutara</option>
+            <option value="Kandy">Kandy</option>
+            <option value="Kurunegala">Kurunegala</option>
+            <option value="Galle">Galle</option>
+            <option value="Matara">Matara</option>
+            <option value="Anuradhapura">Anuradhapura</option>
+            <option value="Ratnapura">Ratnapura</option>
+          </select>
+
+          <input type="text" inputmode="numeric" id="filterMinPrice" class="custom-input font-mono" placeholder="Min Price" oninput="window.formatLiveNumberInput(this)" onchange="loadCars(0)">
+          <input type="text" inputmode="numeric" id="filterMaxPrice" class="custom-input font-mono" placeholder="Max Price" oninput="window.formatLiveNumberInput(this)" onchange="loadCars(0)">
+
+          <select id="filterSource" class="custom-select" onchange="loadCars(0)">
+            <option value="">All Portals</option>
+            <option value="riyasewana">Riyasewana</option>
+            <option value="ikman">Ikman.lk</option>
+          </select>
+
+          <button class="btn-primary" style="padding: 0.55rem 1rem;" onclick="loadCars(0)">Apply</button>
+          <button class="btn-secondary" style="padding: 0.55rem 0.85rem;" onclick="resetFilters()">Reset</button>
+        </div>
+
+        <!-- Valuation Category Pills -->
+        <div class="valuation-pills">
+          <span class="preset-strip-label">Valuation:</span>
+          <button class="val-pill active" id="pillAll" onclick="setDealFilter('', this)">All Records</button>
+          <button class="val-pill" id="pillHot" onclick="setDealFilter('hot', this)">Underpriced (>15% below market)</button>
+          <button class="val-pill" id="pillGood" onclick="setDealFilter('good', this)">Below Average (5-15%)</button>
+          <button class="val-pill" id="pillNeg" onclick="setDealFilter('negotiable', this)">Price on Request / Unstated</button>
+        </div>
+      </div>
+
+      <!-- Feed Header -->
+      <div class="feed-header">
+        <div class="feed-title">
+          <span>Active Inventory</span>
+          <span class="feed-count" id="feedCount">(0 listings)</span>
+        </div>
+
+        <div class="sort-wrap">
+          <label>Sort:</label>
+          <select id="sortBy" class="custom-select" onchange="loadCars(0)">
+            <option value="date_desc">Newest Listings</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="year_desc">Model Year: Newest</option>
+            <option value="mileage_asc">Mileage: Lowest</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Car Grid -->
+      <div class="car-grid" id="carGrid">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <!-- Pagination Controls -->
+      <div class="pagination-row">
+        <button class="page-btn" id="prevPageBtn" onclick="changePage(-1)" disabled>Previous</button>
+        <span id="pageIndicator" class="font-mono" style="font-size: 0.8rem; color: var(--ink-secondary);">Page 1</span>
+        <button class="page-btn" id="nextPageBtn" onclick="changePage(1)">Next</button>
+      </div>
+    </div>
+
+    <!-- VIEW 2: FLIP PIPELINE KANBAN -->
+    <div id="viewPipeline" class="view-section" style="display: none;">
+      <div class="pipeline-container">
+        <!-- Stage 1: Saved -->
+        <div class="kanban-col">
+          <div class="kanban-header">
+            <div class="kanban-title">Saved Stock</div>
+            <span class="kanban-badge" id="badge-saved">0</span>
+          </div>
+          <div class="kanban-cards" id="col-saved"></div>
+        </div>
+
+        <!-- Stage 2: To Call -->
+        <div class="kanban-col">
+          <div class="kanban-header">
+            <div class="kanban-title">Seller Contact</div>
+            <span class="kanban-badge" id="badge-to_call">0</span>
+          </div>
+          <div class="kanban-cards" id="col-to_call"></div>
+        </div>
+
+        <!-- Stage 3: Inspecting -->
+        <div class="kanban-col">
+          <div class="kanban-header">
+            <div class="kanban-title">Lot Inspection</div>
+            <span class="kanban-badge" id="badge-inspecting">0</span>
+          </div>
+          <div class="kanban-cards" id="col-inspecting"></div>
+        </div>
+
+        <!-- Stage 4: Offered -->
+        <div class="kanban-col">
+          <div class="kanban-header">
+            <div class="kanban-title">Negotiation / Offer</div>
+            <span class="kanban-badge" id="badge-offered">0</span>
+          </div>
+          <div class="kanban-cards" id="col-offered"></div>
+        </div>
+
+        <!-- Stage 5: Detailing / In Prep -->
+        <div class="kanban-col">
+          <div class="kanban-header">
+            <div class="kanban-title">In Prep / Polish</div>
+            <span class="kanban-badge" id="badge-detailing">0</span>
+          </div>
+          <div class="kanban-cards" id="col-detailing"></div>
+        </div>
+
+        <!-- Stage 6: Sold -->
+        <div class="kanban-col">
+          <div class="kanban-header">
+            <div class="kanban-title">Sold / Realized</div>
+            <span class="kanban-badge" id="badge-sold">0</span>
+          </div>
+          <div class="kanban-cards" id="col-sold"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 3: MARKET VALUATION INDEX -->
+    <div id="viewMarket" class="view-section" style="display: none;">
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Make & Model</th>
+              <th>Avg Year</th>
+              <th>Benchmark Avg</th>
+              <th>Floor (Min)</th>
+              <th>Turnover Velocity</th>
+              <th>Active Stock</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="marketTableBody">
+            <!-- Populated via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Market Trends Pagination Controls -->
+      <div class="pagination-row">
+        <button class="page-btn" id="prevMarketBtn" onclick="changeMarketPage(-1)" disabled>Previous</button>
+        <span id="marketPageIndicator" class="font-mono" style="font-size: 0.8rem; color: var(--ink-secondary);">Page 1</span>
+        <button class="page-btn" id="nextMarketBtn" onclick="changeMarketPage(1)">Next</button>
+      </div>
+    </div>
+
+    <!-- TAB: SCOUTED INTELLIGENCE DOSSIER -->
+    <div id="dossierTabContent" style="display: none; flex-direction: column; gap: 1.5rem;">
+      <!-- Dossier Header & Model Switcher -->
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--surface-card); padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-radius: var(--radius-lg);">
+        <div>
+          <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--ink);">AI Vehicle Deal Dossiers</h2>
+          <p style="font-size: 0.85rem; color: var(--ink-secondary); margin-top: 0.25rem;">Real-time market floor intelligence, fuel economy ratings, and flip profit breakdowns</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <label class="font-mono" style="font-size: 0.8rem; color: var(--ink-secondary);">Target Model:</label>
+          <select id="dossierModelSelect" class="custom-select" style="min-width: 230px;" onchange="window.selectDossierModel(this.value)">
+            <option value="aqua_2014" selected>Toyota Aqua (2014)</option>
+            <option value="celerio_2015">Suzuki Celerio (2015)</option>
+            <option value="swift_2010">Suzuki Swift (2010)</option>
+            <option value="vitz_2011">Toyota Vitz KSP90 (2011)</option>
+            <option value="wagonr_2015">Suzuki Wagon R Stingray (2015)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Intelligent Model Specs & Health Radar -->
+      <div id="dossierModelSpecs" class="stats-grid">
+        <!-- Injected via dossier.js -->
+      </div>
+
+      <!-- Live Classified Listings Feed for this Model -->
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div class="feed-header">
+          <div class="feed-title">
+            <h2>Live Verified Listings</h2>
+            <span class="feed-count" id="dossierListingsCount">0 active</span>
+          </div>
+          <button class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="window.refreshDossierData()">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Refresh Liveness
+          </button>
+        </div>
+
+        <div class="car-grid" id="dossierCarGrid">
+          <!-- Populated via dossier.js -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODAL: FETCH / SCRAPE MARKET ADS -->
+  <div class="modal-backdrop" id="scrapeModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>Fetch Market Listings</h2>
+        <button class="modal-close" onclick="closeScrapeModal()">×</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+          <label class="preset-strip-label">Target Marketplaces:</label>
+          <div style="display: flex; gap: 1.5rem; margin-top: 0.4rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer;">
+              <input type="checkbox" id="scrapeRiyasewana" checked>
+              <span>Riyasewana</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; cursor: pointer;">
+              <input type="checkbox" id="scrapeIkman" checked>
+              <span>Ikman.lk</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label class="preset-strip-label">Pages to Scrape per Portal:</label>
+          <div style="display: flex; align-items: center; gap: 1rem; margin-top: 0.4rem;">
+            <input type="range" id="scrapePagesSlider" min="1" max="8" value="3" oninput="document.getElementById('scrapePagesVal').innerText = this.value + ' pages'">
+            <span id="scrapePagesVal" class="font-mono" style="font-size: 0.85rem; font-weight: 600; color: var(--signal); min-width: 60px;">3 pages</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="preset-strip-label">Filter Keyword (Optional):</label>
+          <input type="text" id="scrapeKeyword" class="custom-input" placeholder="e.g. Alto, Wagon R, Vitz, Axio..." style="margin-top: 0.4rem;">
+        </div>
+
+        <!-- Terminal Log Feed -->
+        <div id="scrapeLogSection" style="display: none; flex-direction: column; gap: 0.4rem;">
+          <div style="display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem;">
+            <span id="scrapeCurrentStep" style="color: var(--ink);">Processing request</span>
+            <span id="scrapeStatusText" class="font-mono" style="font-weight: 600; color: var(--signal);">RUNNING</span>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="scrapeProgressBar"></div>
+          </div>
+          <div class="terminal-log" id="scrapeLogs"></div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.25rem;">
+          <button class="btn-secondary" onclick="closeScrapeModal()">Close</button>
+          <button class="btn-primary" id="startScrapeBtn" onclick="startScrapeJob()">Start Fetch</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: FLIP PROFIT & PREPARATION CALCULATOR -->
+  <div class="modal-backdrop" id="calcModal">
+    <div class="modal-box" style="max-width: 620px;">
+      <div class="modal-header">
+        <h2>Flip Profit & Detailing Calculator</h2>
+        <button class="modal-close" onclick="closeCalcModal()">×</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div id="calcCarSummary" style="background: var(--surface-subtle); padding: 0.75rem 0.9rem; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+          <!-- Summary injected dynamically -->
+        </div>
+
+        <div class="calc-grid">
+          <div class="calc-row">
+            <label>Agreed Purchase Price (LKR)</label>
+            <input type="text" inputmode="numeric" id="calcBuyPrice" class="custom-input font-mono" placeholder="Enter purchase price" oninput="window.formatLiveNumberInput(this); window.recomputeFlip();">
+          </div>
+
+          <div class="calc-row">
+            <label>Projected Resale Price (LKR)</label>
+            <input type="text" inputmode="numeric" id="calcResalePrice" class="custom-input font-mono" placeholder="Enter resale target" oninput="window.formatLiveNumberInput(this); window.recomputeFlip();">
+          </div>
+
+          <div class="calc-row">
+            <label>Cut & Polish / Detailing (LKR)</label>
+            <input type="text" inputmode="numeric" id="calcDetailingCost" class="custom-input font-mono" value="35,000" oninput="window.formatLiveNumberInput(this); window.recomputeFlip();">
+          </div>
+
+          <div class="calc-row">
+            <label>Mechanical & Touchup Prep (LKR)</label>
+            <input type="text" inputmode="numeric" id="calcRepairCost" class="custom-input font-mono" value="45,000" oninput="window.formatLiveNumberInput(this); window.recomputeFlip();">
+          </div>
+
+          <div class="calc-row">
+            <label>Transport / Transfer Costs (LKR)</label>
+            <input type="text" inputmode="numeric" id="calcFeeCost" class="custom-input font-mono" value="15,000" oninput="window.formatLiveNumberInput(this); window.recomputeFlip();">
+          </div>
+
+          <div class="calc-row">
+            <label>Total Capital Required (LKR)</label>
+            <input type="text" id="calcTotalInvestment" class="custom-input font-mono" readonly style="background: var(--surface-subtle); font-weight: 600;">
+          </div>
+        </div>
+
+        <!-- Profit Calculation Result -->
+        <div class="calc-result-banner">
+          <div>
+            <div class="stat-label">Estimated Net Margin</div>
+            <div class="profit-highlight" id="calcNetProfit">Rs. 0</div>
+          </div>
+          <div style="text-align: right;">
+            <span class="roi-badge" id="calcRoiBadge">0.0% ROI</span>
+            <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-secondary); margin-top: 0.2rem;">Return on capital</div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.25rem;">
+          <button class="btn-secondary" onclick="saveCalculatorToPipeline()">
+            Save to Pipeline
+          </button>
+          <button class="btn-primary" onclick="closeCalcModal()">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PIPELINE LEAD DETAILS & INSPECTION NOTES -->
+  <div class="modal-backdrop" id="pipelineModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>Acquisition Record</h2>
+        <button class="modal-close" onclick="closePipelineModal()">×</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <input type="hidden" id="pipeCarId">
+        
+        <div>
+          <label class="preset-strip-label">Stage:</label>
+          <select id="pipeStage" class="custom-select" style="margin-top: 0.3rem;">
+            <option value="saved">Saved Stock</option>
+            <option value="to_call">Seller Contact</option>
+            <option value="inspecting">Lot Inspection</option>
+            <option value="offered">Negotiation / Offer</option>
+            <option value="detailing">In Prep / Polish</option>
+            <option value="sold">Sold / Realized</option>
+          </select>
+        </div>
+
+        <div class="calc-grid">
+          <div class="calc-row">
+            <label>Seller Phone / WhatsApp</label>
+            <input type="text" id="pipePhone" class="custom-input font-mono" placeholder="07X XXX XXXX">
+          </div>
+          <div class="calc-row">
+            <label>Seller Name / Town</label>
+            <input type="text" id="pipeSellerName" class="custom-input" placeholder="e.g. Kasun (Kurunegala)">
+          </div>
+        </div>
+
+        <div class="calc-grid">
+          <div class="calc-row">
+            <label>Agreed Purchase Price (LKR)</label>
+            <input type="text" inputmode="numeric" id="pipePurchasePrice" class="custom-input font-mono" placeholder="Agreed price" oninput="window.formatLiveNumberInput(this)">
+          </div>
+          <div class="calc-row">
+            <label>Estimated Detailing / Repairs (LKR)</label>
+            <input type="text" inputmode="numeric" id="pipeRepairCost" class="custom-input font-mono" placeholder="Prep estimate" oninput="window.formatLiveNumberInput(this)">
+          </div>
+        </div>
+
+        <div class="calc-row">
+          <label>Inspection Notes & Condition Report</label>
+          <textarea id="pipeNotes" rows="3" class="custom-input" placeholder="Original paint, bumper touchup required, 2nd registered owner..."></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+          <button class="btn-secondary" style="color: var(--danger); border-color: var(--border);" onclick="deleteLeadFromPipeline()">Remove Record</button>
+          <div style="display: flex; gap: 0.4rem;">
+            <button class="btn-secondary" onclick="closePipelineModal()">Cancel</button>
+            <button class="btn-primary" onclick="submitPipelineUpdate()">Save Record</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EMPTY SCRAPE NOTIFICATION -->
+  <div class="modal-backdrop" id="emptyScrapeModal">
+    <div class="modal-box" style="max-width: 480px;">
+      <div class="modal-header">
+        <h2>No Listings Found</h2>
+        <button class="modal-close" onclick="closeEmptyScrapeModal()">×</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <p id="emptyScrapeMessage" style="font-size: 0.88rem; color: var(--ink-secondary); line-height: 1.5;">
+          No matching listings were found for your search criteria on the selected portals.
+        </p>
+
+        <div class="notice-banner">
+          <div style="font-size: 0.82rem; color: var(--ink-secondary);">
+            Recommendation: Broaden your search term (e.g. search "Suzuki" instead of a rare trim) or adjust price boundaries.
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
+          <button class="btn-primary" onclick="closeEmptyScrapeModal()">Acknowledge</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>
