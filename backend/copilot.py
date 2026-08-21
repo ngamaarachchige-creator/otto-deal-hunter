@@ -388,6 +388,8 @@ def run_copilot_agent(user_message: str, history: Optional[List[Dict[str, str]]]
         final_text = raw_content or "Done."
 
     clean_final = final_text.replace("—", ": ").replace("–", ": ")
+    # Strip raw JSON tool declarations sometimes leaked by local models
+    clean_final = re.sub(r'\{?\s*"name"\s*:\s*"[A-Za-z0-9_]+",\s*"arguments"\s*:\s*\{.*?\}\s*\}?', "", clean_final, flags=re.DOTALL)
     clean_final = re.sub(r"\n*\*?\(?\s*\d+\s*words?\s*\)?\*?\s*$", "", clean_final, flags=re.IGNORECASE).strip()
     clean_final = re.sub(r"\n*\*?\(?\s*word count:?\s*\d+\s*\w*\s*\)?\*?\s*$", "", clean_final, flags=re.IGNORECASE).strip()
 
