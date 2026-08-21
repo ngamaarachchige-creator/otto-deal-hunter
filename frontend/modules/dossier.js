@@ -1,5 +1,13 @@
 // Dynamic Module: Scouted Intelligence & Vehicle Dossiers
 import { formatLKR, switchTab } from '../app.js';
+import { icon, liquidityIcon, starRow } from './icons.js';
+
+const TIER_BADGE_CLASS = {
+  1: 'liquidity-tier-1',
+  2: 'liquidity-tier-2',
+  3: 'liquidity-tier-3',
+  4: 'liquidity-tier-4',
+};
 
 export const DOSSIER_MODELS = {
   'aqua_2014': {
@@ -11,9 +19,11 @@ export const DOSSIER_MODELS = {
     national_floor: 7280000,
     fuel_city: '19–23 km/l',
     fuel_highway: '26–30 km/l',
-    fuel_grade: '⭐⭐⭐⭐⭐ (Hybrid Flagship)',
+    fuel_rating: 5,
+    fuel_label: 'Hybrid Flagship',
     reliability_rating: '4.8 / 5.0 · Top Sri Lankan Resale',
-    turnover_velocity: '⚡ Tier 1: Instant Cash (3–7 Days)',
+    turnover_tier: 1,
+    turnover_velocity: 'Tier 1: Instant Cash (3–7 Days)',
     gotchas: [
       'ABS Actuator Accumulator: Listen for rapid pump buzzing every 5–10s when idle (~Rs. 110k to replace).',
       'Hybrid Battery: Check individual cell voltages via OBD2 Hybrid Assistant (keep delta < 0.2V).',
@@ -32,9 +42,11 @@ export const DOSSIER_MODELS = {
     national_floor: 4975000,
     fuel_city: '16–18 km/l',
     fuel_highway: '22–25 km/l',
-    fuel_grade: '⭐⭐⭐⭐⭐ (Budget Fuel King)',
+    fuel_rating: 5,
+    fuel_label: 'Budget Fuel King',
     reliability_rating: '4.9 / 5.0 · Indestructible City Runabout',
-    turnover_velocity: '⚡ Tier 1: Instant Cash (3–5 Days)',
+    turnover_tier: 1,
+    turnover_velocity: 'Tier 1: Instant Cash (3–5 Days)',
     gotchas: [
       'K10B Timing Chain: Bulletproof engine, inspect for noisy idler pulleys.',
       'AMT Gearbox (if Automatic): Test smooth low-speed creep and reverse gear engagement.',
@@ -53,9 +65,11 @@ export const DOSSIER_MODELS = {
     national_floor: 4125000,
     fuel_city: '12–14 km/l',
     fuel_highway: '16–18 km/l',
-    fuel_grade: '⭐⭐⭐⭐ (Enthusiast Hatch)',
+    fuel_rating: 4,
+    fuel_label: 'Enthusiast Hatch',
     reliability_rating: '4.7 / 5.0 · High Demand Japanese Shape',
-    turnover_velocity: '🔥 Tier 2: High Demand (7–10 Days)',
+    turnover_tier: 2,
+    turnover_velocity: 'Tier 2: High Demand (7–10 Days)',
     gotchas: [
       'EPS Steering Rack: Check for clicking or rattle when turning full lock on rough roads.',
       'Lower Arm Bushes & Engine Mounts: Inspect front rubber bushings.',
@@ -74,9 +88,11 @@ export const DOSSIER_MODELS = {
     national_floor: 5500000,
     fuel_city: '13–15 km/l',
     fuel_highway: '18–20 km/l',
-    fuel_grade: '⭐⭐⭐⭐½ (Ultra-Reliable)',
+    fuel_rating: 5,
+    fuel_label: 'Ultra-Reliable',
     reliability_rating: '5.0 / 5.0 · Gold Standard Resale',
-    turnover_velocity: '⚡ Tier 1: Instant Cash (3–7 Days)',
+    turnover_tier: 1,
+    turnover_velocity: 'Tier 1: Instant Cash (3–7 Days)',
     gotchas: [
       'Engine Mount Vibration: 1KR-FE 3-cyl idle shudder at stops (cheap fix: rear mount ~Rs. 8,000).',
       'CVT Fluid Service History: Ensure fluid was replaced with genuine Toyota TC/FE.',
@@ -95,9 +111,11 @@ export const DOSSIER_MODELS = {
     national_floor: 5850000,
     fuel_city: '18–21 km/l',
     fuel_highway: '24–27 km/l',
-    fuel_grade: '⭐⭐⭐⭐⭐ (Semi-Hybrid)',
+    fuel_rating: 5,
+    fuel_label: 'Semi-Hybrid',
     reliability_rating: '4.8 / 5.0 · Highest Volume in SL',
-    turnover_velocity: '⚡ Tier 1: Instant Cash (3–7 Days)',
+    turnover_tier: 1,
+    turnover_velocity: 'Tier 1: Instant Cash (3–7 Days)',
     gotchas: [
       'Auxiliary Lithium Battery: Under passenger seat; test charge hold via dashboard eco-meter.',
       'Radar Brake Support: Calibrate laser sensor on windshield if replaced.',
@@ -131,7 +149,7 @@ function renderDossierSpecs(data) {
       <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.5rem;">
         <div>
           <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--signal); font-weight: 700; text-transform: uppercase;">
-            🎯 Model Acquisition Dossier
+            ${icon('target', { size: 12 })} Model Acquisition Dossier
           </span>
           <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--ink); margin-top: 0.2rem;">
             ${data.name}
@@ -139,10 +157,10 @@ function renderDossierSpecs(data) {
         </div>
         <div style="display: flex; gap: 0.5rem; align-items: center;">
           <span class="badge-liquidity" style="font-size: 0.78rem; padding: 0.3rem 0.75rem;">
-            ${data.turnover_velocity}
+            ${liquidityIcon(TIER_BADGE_CLASS[data.turnover_tier])} ${data.turnover_velocity}
           </span>
           <span class="badge-deal good" style="font-size: 0.78rem; padding: 0.3rem 0.75rem; position: static;">
-            ${data.fuel_grade}
+            ${starRow(data.fuel_rating, { size: 11 })} ${data.fuel_label}
           </span>
         </div>
       </div>
@@ -159,8 +177,10 @@ function renderDossierSpecs(data) {
         </div>
         <div>
           <div class="stat-label">Real Fuel Economy</div>
-          <div style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: 700; color: var(--ink); margin-top: 0.25rem;">
-            🏙️ ${data.fuel_city} · 🛣️ ${data.fuel_highway}
+          <div style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: 700; color: var(--ink); margin-top: 0.25rem; display: flex; align-items: center; gap: 0.4rem;">
+            <span style="display:inline-flex; align-items:center; gap:0.25rem;">${icon('building', { size: 13 })} ${data.fuel_city}</span>
+            <span style="color: var(--ink-tertiary);">·</span>
+            <span style="display:inline-flex; align-items:center; gap:0.25rem;">${icon('route', { size: 13 })} ${data.fuel_highway}</span>
           </div>
         </div>
         <div>
@@ -174,19 +194,19 @@ function renderDossierSpecs(data) {
       <!-- Buy vs Resale Strategy Range -->
       <div style="margin-top: 1rem; padding: 0.85rem 1.1rem; background: var(--surface-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem; font-family: var(--font-mono); font-size: 0.8rem;">
         <div>
-          <span style="color: var(--ink-secondary);">🎯 Target Buy Range:</span>
+          <span style="color: var(--ink-secondary);">${icon('target', { size: 12 })} Target Buy Range:</span>
           <strong style="color: var(--success); margin-left: 0.3rem;">${data.target_buy_range}</strong>
         </div>
         <div>
-          <span style="color: var(--ink-secondary);">⚡ Conservative Fast Resale:</span>
+          <span style="color: var(--ink-secondary);">${icon('zap', { size: 12 })} Conservative Fast Resale:</span>
           <strong style="color: var(--signal); margin-left: 0.3rem;">${data.target_resale_range}</strong>
         </div>
       </div>
 
       <!-- Sri Lankan Mechanic & Inspection Gotchas -->
       <div style="margin-top: 1rem;">
-        <div class="stat-label" style="margin-bottom: 0.4rem; color: var(--danger); font-weight: 700;">
-          ⚠️ Sri Lankan Pre-Purchase Gotchas & Checklist:
+        <div class="stat-label" style="margin-bottom: 0.4rem; color: var(--danger); font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">
+          ${icon('alertTriangle', { size: 13 })} Sri Lankan Pre-Purchase Gotchas & Checklist:
         </div>
         <ul style="margin: 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.82rem; color: var(--ink-secondary);">
           ${data.gotchas.map(g => `<li>${g}</li>`).join('')}
@@ -239,7 +259,7 @@ async function fetchAndRenderDossierListings(data) {
           <div class="car-media">
             ${imageHtml}
             <span class="badge-source">${car.source === 'riyasewana' ? 'Riyasewana' : 'Ikman.lk'}</span>
-            ${isFloor ? `<span class="badge-deal hot" style="top: 0.65rem; right: 0.65rem;">👑 Absolute Floor</span>` : (isColombo ? `<span class="badge-deal good" style="top: 0.65rem; right: 0.65rem;">📍 Colombo Deal</span>` : '')}
+            ${isFloor ? `<span class="badge-deal hot" style="top: 0.65rem; right: 0.65rem;">${icon('award', { size: 12 })} Absolute Floor</span>` : (isColombo ? `<span class="badge-deal good" style="top: 0.65rem; right: 0.65rem;">${icon('mapPin', { size: 12 })} Colombo Deal</span>` : '')}
           </div>
 
           <div class="car-card-body">
@@ -251,7 +271,7 @@ async function fetchAndRenderDossierListings(data) {
                 ${car.mileage_display ? `<span>· ${car.mileage_display}</span>` : ''}
               </div>
               <div style="margin-top: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
-                <span class="badge-liquidity">${car.liquidity_tag || '⚡ 3–7d Turnover'}</span>
+                <span class="badge-liquidity">${liquidityIcon(car.liquidity_badge_class)} ${car.liquidity_tag || '3–7d Turnover'}</span>
                 <span style="font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-secondary);">${car.liquidity_tier || ''}</span>
               </div>
             </div>

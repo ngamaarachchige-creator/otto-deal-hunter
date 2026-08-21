@@ -708,6 +708,9 @@ header {
   position: absolute;
   top: 0.75rem;
   right: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   padding: 0.25rem 0.7rem;
   border-radius: var(--radius-pill);
   font-family: var(--font-mono);
@@ -738,6 +741,7 @@ header {
 .badge-liquidity {
   display: inline-flex;
   align-items: center;
+  gap: 0.3rem;
   padding: 0.18rem 0.55rem;
   border-radius: var(--radius-pill);
   font-family: var(--font-mono);
@@ -868,10 +872,23 @@ header {
   font-size: 0.82rem;
   cursor: pointer;
   transition: all 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
 }
 
 .btn-card-track:hover {
   background: var(--accent-dark-hover);
+}
+
+.star-filled {
+  color: var(--warning);
+  fill: var(--warning);
+}
+
+.star-empty {
+  color: var(--line-dark);
 }
 
 /* Pagination */

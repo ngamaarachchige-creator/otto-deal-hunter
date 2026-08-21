@@ -2,6 +2,7 @@
 
 import { parseNaturalLanguageQuery, renderParsedChips } from './modules/nluSearch.js';
 import { ScoutMascot } from './modules/mascot.js';
+import { icon, liquidityIcon } from './modules/icons.js';
 
 let currentCars = [];
 let currentOffset = 0;
@@ -380,7 +381,7 @@ function renderCarCard(car) {
 
   let liquidityBadge = '';
   if (car.liquidity_tier) {
-    liquidityBadge = `<span class="badge-liquidity" title="${car.liquidity_days_est || ''}">⚡ ${car.liquidity_tier}</span>`;
+    liquidityBadge = `<span class="badge-liquidity" title="${car.liquidity_days_est || ''}">${liquidityIcon(car.liquidity_badge_class)} ${car.liquidity_tier}</span>`;
   }
 
   return `
@@ -416,8 +417,7 @@ function renderCarCard(car) {
             <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
             View Ad
           </a>
-          <button class="btn-card-track" onclick="window.openTrackPipelineModal(${car.id})">+ Track Lead</button>
-          <button class="btn-card-track" onclick="window.openAiInspectModal(${car.id})">🤖 AI Inspect</button>
+          <button class="btn-card-track" onclick="window.openAiInspectModal(${car.id})">${icon('sparkles')} AI Inspect</button>
         </div>
       </div>
     </div>

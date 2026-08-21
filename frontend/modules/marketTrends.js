@@ -1,5 +1,6 @@
 // Dynamic Module: Market Trends & Valuation Index
 import { formatLKR, switchTab, loadCars } from '../app.js';
+import { liquidityIcon } from './icons.js';
 
 let currentMarketOffset = 0;
 const marketLimit = 20;
@@ -41,7 +42,7 @@ export async function loadMarketTrends(offset = 0) {
         <td class="font-mono" style="font-weight: 700; color: var(--signal);">${formatLKR(t.avg_price)}</td>
         <td class="font-mono" style="color: var(--success);">${formatLKR(t.min_price)}</td>
         <td>
-          <span class="badge-liquidity">${t.liquidity_tag || '⚡ 3–7d Turnover'}</span>
+          <span class="badge-liquidity">${liquidityIcon(t.liquidity_badge_class)} ${t.liquidity_tag || '3–7d Turnover'}</span>
           <div class="font-mono" style="font-size:0.68rem; color:var(--ink-secondary); margin-top:2px;">${t.liquidity_tier || ''}</div>
         </td>
         <td class="font-mono">${t.total_ads} ads</td>

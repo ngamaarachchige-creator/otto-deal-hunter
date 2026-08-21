@@ -25,7 +25,7 @@ def compute_liquidity_tier(make: str, model: str, body_type: str = "", year: int
             "turnaround_days": "3–7 Days",
             "velocity_score": 95,
             "badge_class": "liquidity-tier-1",
-            "tag": "⚡ 3–7d Turnover"
+            "tag": "3–7d Turnover"
         }
         
     # Tier 2: High Demand (7-15 Days)
@@ -36,7 +36,7 @@ def compute_liquidity_tier(make: str, model: str, body_type: str = "", year: int
             "turnaround_days": "7–15 Days",
             "velocity_score": 80,
             "badge_class": "liquidity-tier-2",
-            "tag": "🔥 7–15d Turnover"
+            "tag": "7–15d Turnover"
         }
         
     # Tier 3: SUV & Utility (20-45 Days)
@@ -47,7 +47,7 @@ def compute_liquidity_tier(make: str, model: str, body_type: str = "", year: int
             "turnaround_days": "20–45 Days",
             "velocity_score": 60,
             "badge_class": "liquidity-tier-3",
-            "tag": "🚙 20–45d Turnover"
+            "tag": "20–45d Turnover"
         }
         
     # Tier 4: Slower Liquidity (45+ Days)
@@ -56,7 +56,7 @@ def compute_liquidity_tier(make: str, model: str, body_type: str = "", year: int
         "turnaround_days": "45–90+ Days",
         "velocity_score": 35,
         "badge_class": "liquidity-tier-4",
-        "tag": "⏳ 45+d Turnover"
+        "tag": "45+d Turnover"
     }
 
 _benchmark_cache = None
@@ -244,6 +244,7 @@ def get_market_trends_summary(limit: int = 20, offset: int = 0) -> Dict[str, Any
         d['turnaround_days'] = liq['turnaround_days']
         d['velocity_score'] = liq['velocity_score']
         d['liquidity_tag'] = liq['tag']
+        d['liquidity_badge_class'] = liq['badge_class']
         trends.append(d)
         
     conn.close()
