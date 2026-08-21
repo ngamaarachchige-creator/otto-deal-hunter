@@ -99,7 +99,7 @@ export async function switchTab(tabId) {
     mod.loadMarketTrends(0);
   } else if (tabId === 'dossier') {
     const mod = await getDossierModule();
-    mod.loadDossierView();
+    mod.loadDossierTab();
   }
 }
 window.switchTab = switchTab;
