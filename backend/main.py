@@ -424,6 +424,10 @@ def export_deals_csv(
 if os.path.exists(FRONTEND_DIR):
     app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse("frontend/assets/favicon.svg", media_type="image/svg+xml")
+
 @app.get("/")
 def serve_root():
     index_file = os.path.join(FRONTEND_DIR, "index.html")
