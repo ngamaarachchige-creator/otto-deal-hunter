@@ -39,19 +39,20 @@ export function initCopilot() {
   const input = document.getElementById('ottoCopilotInput');
 
   if (trigger) {
-    trigger.addEventListener('click', toggleCopilot);
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (window.toggleCommandBar) {
+        window.toggleCommandBar();
+      } else {
+        toggleCopilot();
+      }
+    });
   }
   if (closeBtn) {
     closeBtn.addEventListener('click', closeCopilot);
   }
 
-  // Keyboard shortcut: Cmd+K / Ctrl+K
-  window.addEventListener('keydown', (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-      e.preventDefault();
-      toggleCopilot();
-    }
-  });
+
 
   if (form && input) {
     form.addEventListener('submit', (e) => {

@@ -1,4 +1,5 @@
 import { initCopilot } from './modules/copilot.js';
+import { initCommandBar } from './modules/commandBar.js';
 // Lanka Car Hunter · Main Application Controller
 
 import { parseNaturalLanguageQuery, renderParsedChips } from './modules/nluSearch.js';
@@ -648,6 +649,7 @@ function initializeApp() {
     console.warn('Mascot init fallback:', e);
   }
   try { initCopilot(); } catch(e) { console.warn('Copilot init error:', e); }
+  try { initCommandBar(); } catch(e) { console.warn('CommandBar init error:', e); }
   loadStats();
   loadCars(0);
 }
