@@ -222,7 +222,7 @@ export async function sendCopilotMessage(userText) {
   agentMsgEl.id = agentMsgId;
   agentMsgEl.innerHTML = `
     <div class="agent-avatar">
-      <img src="/static/assets/bloub-cercle-attentif-encre-anime_circle.svg" alt="OTTO" width="28" height="28">
+      <img src="/static/assets/header_logo_animated.svg" alt="OTTO" width="28" height="28">
     </div>
     <div class="agent-body" id="${agentMsgId}_body">
       <div class="agent-run-log">

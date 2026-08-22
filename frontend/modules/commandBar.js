@@ -127,7 +127,7 @@ function getSuggestions(val) {
   return [
     {
       icon: '🤖',
-      text: `Ask OTTO Copilot: <strong>"${cleanVal}"</strong>`,
+      text: `Ask OTTO Agent: <strong>"${cleanVal}"</strong>`,
       shortcut: '↵ Enter',
       action: 'ask_otto',
       query: cleanVal
