@@ -386,6 +386,35 @@ function renderCarCard(car) {
     liquidityBadge = `<span class="badge-liquidity" title="${car.liquidity_days_est || ''}">${liquidityIcon(car.liquidity_badge_class)} ${car.liquidity_tier}</span>`;
   }
 
+  let dealScoringHtml = '';
+  if (car.deal_score !== undefined) {
+    const scoreVal = car.deal_score || 50;
+    let scoreClass = 'fair';
+    if (car.valuation_rating === 'HOT_DEAL') scoreClass = 'hot';
+    else if (car.valuation_rating === 'GOOD_DEAL') scoreClass = 'good';
+    else if (car.valuation_rating === 'OVERPRICED') scoreClass = 'overpriced';
+    else if (car.valuation_rating === 'UNPRICED') scoreClass = 'unpriced';
+
+    let confidenceClass = 'low';
+    if (car.deal_confidence === 'HIGH') confidenceClass = 'high';
+    else if (car.deal_confidence === 'MEDIUM') confidenceClass = 'medium';
+
+    dealScoringHtml = `
+      <div class="deal-scoring-row">
+        <div class="score-badge" title="Valuation score: 0 is worst, 99 is best deal">
+          <span class="score-label">Score:</span>
+          <span class="score-value ${scoreClass}">${scoreVal}/99</span>
+        </div>
+        ${car.deal_confidence_label ? `
+          <div class="confidence-tag ${confidenceClass}" title="${escapeHtml(car.deal_confidence_label)}">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            ${escapeHtml(car.deal_confidence_label)}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
   return `
     <div class="car-card ${isHot ? 'hot-deal' : ''}">
       <div class="car-media">
@@ -401,6 +430,7 @@ function renderCarCard(car) {
           <span>${escapeHtml(car.location || car.district || 'Sri Lanka')}</span>
         </div>
         ${liquidityBadge ? `<div style="margin-top: -0.25rem;">${liquidityBadge}</div>` : ''}
+        ${dealScoringHtml}
         ${flipBoxHtml}
         <div class="car-price-row">
           <div>

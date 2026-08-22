@@ -150,8 +150,34 @@ def enrich_car_with_valuation(car: Dict[str, Any], benchmarks: Dict[str, Dict[st
 
     detailed_key = f"{make}_{model}_{year}"
     general_key = f"{make}_{model}"
-    benchmark = benchmarks["detailed"].get(detailed_key) or benchmarks["general"].get(general_key)
+    
+    is_detailed = False
+    sample_size = 0
+    if detailed_key in benchmarks["detailed"]:
+        benchmark = benchmarks["detailed"][detailed_key]
+        is_detailed = True
+        sample_size = benchmark.get("sample_size", 0)
+    elif general_key in benchmarks["general"]:
+        benchmark = benchmarks["general"][general_key]
+        sample_size = benchmark.get("sample_size", 0)
+    else:
+        benchmark = None
+
     avg_price = benchmark["avg_price"] if benchmark else 0.0
+
+    # Assign confidence labels based on benchmark sample size
+    if not benchmark:
+        car["deal_confidence"] = "LOW"
+        car["deal_confidence_label"] = "No Benchmark Ads"
+    elif is_detailed and sample_size >= 8:
+        car["deal_confidence"] = "HIGH"
+        car["deal_confidence_label"] = f"High Confidence ({sample_size} ads)"
+    elif is_detailed and sample_size >= 3:
+        car["deal_confidence"] = "MEDIUM"
+        car["deal_confidence_label"] = f"Medium Confidence ({sample_size} ads)"
+    else:
+        car["deal_confidence"] = "LOW"
+        car["deal_confidence_label"] = f"Low Confidence ({sample_size} fallback ads)"
 
     # Handle unpriced/negotiable cars
     if car.get("is_negotiable") or price <= 0:
@@ -179,6 +205,7 @@ def enrich_car_with_valuation(car: Dict[str, Any], benchmarks: Dict[str, Dict[st
     
     car["market_avg_price"] = avg_price
     car["discount_pct"] = round(discount_pct, 1)
+    car["discount_percentage"] = car["discount_pct"]
     
     std_refurb_cost = 80000.0
     est_resale = avg_price * 0.97

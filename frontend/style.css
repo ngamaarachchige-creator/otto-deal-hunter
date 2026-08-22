@@ -2001,3 +2001,71 @@ header {
   border-color: var(--ink);
   color: var(--ink);
 }
+
+/* Deal Scoring & Confidence Tags */
+.deal-scoring-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+}
+
+.score-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.18rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.score-value {
+  font-weight: 700;
+}
+
+.score-value.hot {
+  color: #10b981; /* emerald green */
+}
+
+.score-value.good {
+  color: #34d399; /* mint green */
+}
+
+.score-value.fair {
+  color: #fbbf24; /* amber */
+}
+
+.score-value.overpriced {
+  color: #f87171; /* red */
+}
+
+.confidence-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.18rem 0.45rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.confidence-tag.high {
+  background: rgba(16, 185, 129, 0.08);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.confidence-tag.medium {
+  background: rgba(251, 191, 36, 0.08);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.15);
+}
+
+.confidence-tag.low {
+  background: rgba(248, 113, 113, 0.08);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.15);
+}
