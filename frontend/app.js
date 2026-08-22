@@ -506,6 +506,19 @@ export function setDealFilter(filterVal, btn) {
 }
 window.setDealFilter = setDealFilter;
 
+export function showHotOpportunities() {
+  switchTab('deals');
+  const pillHot = document.getElementById('pillHot');
+  if (pillHot) {
+    setDealFilter('hot', pillHot);
+  }
+  const feedHeader = document.querySelector('.feed-header');
+  if (feedHeader) {
+    feedHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+window.showHotOpportunities = showHotOpportunities;
+
 export function resetFilters() {
   document.getElementById('filterQuery').value = '';
   document.getElementById('filterMake').value = '';
@@ -523,6 +536,7 @@ export function resetFilters() {
   loadCars(0);
 }
 window.resetFilters = resetFilters;
+window.showHotOpportunities = showHotOpportunities;
 
 export function changePage(dir) {
   const newOffset = currentOffset + dir * pageLimit;
@@ -590,10 +604,9 @@ export async function openAiInspectModal(carId) {
 
   body.innerHTML = `${imgHtml}
   <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 2rem 0;">
-    <div class="loader" style="width: 24px; height: 24px; border: 3px solid var(--line); border-top-color: var(--ink); border-radius: 50%; animation: spin 1s linear infinite;"></div>
     <span class="font-mono" style="color: var(--ink-secondary); font-size: 0.9rem;">OTTO is thinking...</span>
+    <img src="/static/assets/loading.gif" alt="" width="48" height="48">
   </div>
-  <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 `;
 
   try {
@@ -631,6 +644,7 @@ window.switchTab = switchTab;
 window.applyPreset = applyPreset;
 window.setDealFilter = setDealFilter;
 window.resetFilters = resetFilters;
+window.showHotOpportunities = showHotOpportunities;
 window.changePage = changePage;
 window.exportData = exportData;
 window.executeNLUSearch = executeNLUSearch;

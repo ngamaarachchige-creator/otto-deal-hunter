@@ -114,8 +114,8 @@ header {
 }
 
 .mascot-avatar {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -138,12 +138,19 @@ header {
   object-fit: contain;
 }
 
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
 .logo-text h1 {
   font-size: 1.18rem;
   font-weight: 800;
   letter-spacing: -0.025em;
   color: var(--ink-navy);
-  line-height: 1.2;
+  line-height: 1;
+  margin: 0;
 }
 
 .logo-text span {
@@ -151,6 +158,8 @@ header {
   font-family: var(--font-mono);
   color: var(--ink-secondary);
   letter-spacing: 0.01em;
+  line-height: 1;
+  margin: 0;
 }
 
 /* Floating Navigation Tabs */
@@ -302,6 +311,15 @@ header {
   transform: translateY(-2px);
   box-shadow: var(--shadow-hover);
   border-color: rgba(255, 255, 255, 1);
+}
+
+.stat-card.clickable {
+  cursor: pointer;
+}
+
+.stat-card.clickable:hover {
+  border-color: var(--success);
+  background: rgba(16, 185, 129, 0.02);
 }
 
 .stat-label {
@@ -1334,21 +1352,21 @@ header {
   align-items: center;
   gap: 0.65rem;
   padding: 0.5rem 1rem 0.5rem 0.5rem;
-  background: rgba(10, 10, 12, 0.9);
+  background: #ffffff;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--ink-navy);
+  border: 1px solid rgba(23, 32, 58, 0.1);
   border-radius: var(--radius-pill);
-  box-shadow: 0 10px 30px -4px rgba(10, 10, 12, 0.35), 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 30px -4px rgba(10, 10, 12, 0.16), 0 2px 6px rgba(0, 0, 0, 0.06);
   cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
 .copilot-floating-trigger:hover {
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 14px 36px -4px rgba(10, 10, 12, 0.45);
-  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 14px 36px -4px rgba(10, 10, 12, 0.22);
+  border-color: rgba(23, 32, 58, 0.18);
 }
 
 .copilot-floating-trigger.hidden {
@@ -1380,7 +1398,7 @@ header {
   width: 9px;
   height: 9px;
   background: #10b981;
-  border: 2px solid #0a0a0c;
+  border: 2px solid #ffffff;
   border-radius: 50%;
 }
 
@@ -1396,9 +1414,9 @@ header {
   font-size: 0.68rem;
   font-weight: 700;
   padding: 0.15rem 0.4rem;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(23, 32, 58, 0.07);
   border-radius: 4px;
-  color: #38bdf8;
+  color: #0891b2;
 }
 
 /* Slide-Over Backdrop & Panel */
@@ -1849,6 +1867,34 @@ header {
   .copilot-panel {
     width: 100vw;
   }
+  .copilot-close-btn {
+    padding: 0.5rem 0.8rem;
+    font-size: 1.25rem;
+  }
+  .copilot-input-bar {
+    padding: 0.75rem 0.85rem;
+  }
+  .copilot-input {
+    height: 42px;
+    font-size: 16px; /* Prevents auto-zoom on iOS Safari */
+  }
+  .copilot-submit {
+    width: 42px;
+    height: 42px;
+  }
+  .copilot-feed {
+    padding: 0.85rem;
+    gap: 1rem;
+  }
+  .copilot-msg.user-msg .msg-bubble {
+    max-width: 90%;
+  }
+  .command-shortcut {
+    display: none;
+  }
+  .command-bar-box {
+    margin: 0 1rem;
+  }
 }
 
 /* Greeting Bubble above Floating Trigger */
@@ -2118,7 +2164,7 @@ header {
   display: flex;
   align-items: start;
   justify-content: center;
-  padding-top: 15vh;
+  padding: 15vh 1rem 1rem 1rem;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
