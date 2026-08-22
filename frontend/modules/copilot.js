@@ -41,11 +41,7 @@ export function initCopilot() {
   if (trigger) {
     trigger.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (window.toggleCommandBar) {
-        window.toggleCommandBar();
-      } else {
-        toggleCopilot();
-      }
+      toggleCopilot();
     });
   }
   if (closeBtn) {
