@@ -179,16 +179,44 @@ def execute_search_deals(
         
     return enriched[:limit]
 
+COPILOT_SCRAPE_LOGS = []
+
 def execute_live_scrape(query: str = "") -> Dict[str, Any]:
+    global COPILOT_SCRAPE_LOGS
+    COPILOT_SCRAPE_LOGS.clear()
+    
+    query_desc = query or "All Recent Ads"
+    COPILOT_SCRAPE_LOGS.append(f"Initiating live search on Riyasewana for '{query_desc}'...")
+    
     riya = RiyasewanaScraper()
-    items = riya.scrape_multi_pages(max_pages=1, query=query)
-    if items:
-        upsert_cars_batch(items)
+    def riya_prog(msg, cur, total):
+        COPILOT_SCRAPE_LOGS.append(msg)
+        
+    riya_items = riya.scrape_multi_pages(max_pages=1, progress_callback=riya_prog, query=query)
+    riya_count = len(riya_items)
+    if riya_items:
+        upsert_cars_batch(riya_items)
+    COPILOT_SCRAPE_LOGS.append(f"Completed Riyasewana. Found {riya_count} listings.")
+    
+    COPILOT_SCRAPE_LOGS.append(f"Connecting to Ikman.lk for '{query_desc}'...")
+    ikman = IkmanScraper()
+    def ikman_prog(msg, cur, total):
+        COPILOT_SCRAPE_LOGS.append(msg)
+        
+    ikman_items = ikman.scrape_multi_pages(max_pages=1, progress_callback=ikman_prog, query=query)
+    ikman_count = len(ikman_items)
+    if ikman_items:
+        upsert_cars_batch(ikman_items)
+    COPILOT_SCRAPE_LOGS.append(f"Completed Ikman.lk. Found {ikman_count} listings.")
+    
+    total_count = riya_count + ikman_count
+    COPILOT_SCRAPE_LOGS.append(f"Finished live scrape. {total_count} total listings indexed.")
+    
     return {
         "status": "completed",
-        "new_listings_count": len(items),
-        "source": "Riyasewana Live Feed",
-        "query": query or "All Recent Ads"
+        "new_listings_count": total_count,
+        "source": "Riyasewana & Ikman Live Feed",
+        "query": query_desc
     }
 
 def execute_pipeline_summary() -> Dict[str, Any]:

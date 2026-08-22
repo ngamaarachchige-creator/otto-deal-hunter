@@ -2072,3 +2072,37 @@ header {
   color: #f87171;
   border: 1px solid rgba(248, 113, 113, 0.15);
 }
+
+/* Copilot Live Terminal Box */
+.copilot-live-terminal-wrap {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  background: #0d0d11;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.copilot-terminal-header {
+  background: #18181f;
+  padding: 0.3rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--ink-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.copilot-terminal-body {
+  padding: 0.5rem 0.6rem;
+  height: 120px;
+  overflow-y: auto;
+  font-size: 0.7rem;
+  color: #38bdf8; /* terminal blue */
+  line-height: 1.4;
+  white-space: pre-wrap;
+  text-align: left;
+}

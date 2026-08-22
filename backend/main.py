@@ -484,3 +484,8 @@ def get_copilot_status():
     except Exception:
         pass
     return {"active": False, "model": OLLAMA_MODEL}
+
+@app.get("/api/copilot/scrape-logs")
+def get_copilot_scrape_logs():
+    from .copilot import COPILOT_SCRAPE_LOGS
+    return {"logs": COPILOT_SCRAPE_LOGS}

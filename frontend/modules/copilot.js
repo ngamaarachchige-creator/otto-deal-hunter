@@ -207,12 +207,44 @@ export async function sendCopilotMessage(userText) {
       <div class="agent-run-log">
         <div class="run-step active"><span class="step-dot"></span> Initiating OTTO deal scout agent...</div>
       </div>
+      <div class="copilot-live-terminal-wrap" id="${agentMsgId}_terminal_wrap" style="display: none;">
+        <div class="copilot-terminal-header">
+          <span>Live Scrape Progress Logs</span>
+        </div>
+        <div class="copilot-terminal-body font-mono" id="${agentMsgId}_terminal_body"></div>
+      </div>
     </div>
   `;
   feed.appendChild(agentMsgEl);
   feed.scrollTop = feed.scrollHeight;
 
   const targetBody = document.getElementById(`${agentMsgId}_body`);
+  const terminalWrap = document.getElementById(`${agentMsgId}_terminal_wrap`);
+  const terminalBody = document.getElementById(`${agentMsgId}_terminal_body`);
+
+  let lastLogCount = 0;
+  const pollInterval = setInterval(async () => {
+    try {
+      const pRes = await fetch('/api/copilot/scrape-logs');
+      if (pRes.ok) {
+        const pData = await pRes.json();
+        const logs = pData.logs || [];
+        if (logs.length > 0) {
+          if (terminalWrap && terminalWrap.style.display === 'none') {
+            terminalWrap.style.display = 'block';
+            feed.scrollTop = feed.scrollHeight;
+          }
+          if (terminalBody) {
+            terminalBody.textContent = logs.map(line => `> ${line}`).join('\n');
+            if (logs.length !== lastLogCount) {
+              lastLogCount = logs.length;
+              terminalBody.scrollTop = terminalBody.scrollHeight;
+            }
+          }
+        }
+      }
+    } catch (e) {}
+  }, 1000);
 
   try {
     const res = await fetch('/api/copilot/chat', {
@@ -230,6 +262,7 @@ export async function sendCopilotMessage(userText) {
       throw new Error(err.detail || 'Failed to communicate with OTTO agent');
     }
 
+    clearInterval(pollInterval);
     const data = await res.json();
     const thoughtSteps = data.thought_steps || [];
     const logEl = targetBody.querySelector('.agent-run-log');
@@ -320,6 +353,7 @@ export async function sendCopilotMessage(userText) {
     `;
 
   } catch (err) {
+    clearInterval(pollInterval);
     if (err.name === 'AbortError') {
       targetBody.innerHTML = `
         <div style="color: var(--ink-secondary); font-size: 0.82rem; font-style: italic;">
