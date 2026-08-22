@@ -645,6 +645,7 @@ window.formatLiveNumberInput = formatLiveNumberInput;
 function initializeApp() {
   try {
     mascot = new ScoutMascot('mascotContainer');
+    window.ottoMascot = mascot;
   } catch (e) {
     console.warn('Mascot init fallback:', e);
   }

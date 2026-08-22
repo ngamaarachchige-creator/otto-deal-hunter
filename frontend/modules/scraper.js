@@ -44,6 +44,8 @@ export async function startScrapingJob() {
     startBtn.innerText = 'Fetching...';
   }
 
+  window.ottoMascot?.setBusy('scraping');
+
   const logSection = document.getElementById('scrapeLogSection');
   if (logSection) logSection.style.display = 'flex';
   
@@ -123,9 +125,13 @@ function pollScrapeStatus(jobId) {
           const queryMsg = job.query_used ? `for '${job.query_used}'` : '';
           const sourcesMsg = (job.sources || []).join(' and ');
           openEmptyScrapeModal(`No matching listings were found on ${sourcesMsg} ${queryMsg}. Check your spelling or try searching for a broader term like 'Suzuki' or 'Toyota'.`);
+          window.ottoMascot?.idle();
+        } else {
+          window.ottoMascot?.triggerState('excited', 3000);
         }
       } else if (job.status === 'error') {
         clearInterval(pollTimer);
+        window.ottoMascot?.triggerState('error', 3000);
         if (stepEl) {
           stepEl.innerText = 'Scraping Error: ' + (job.error || 'Failed');
           stepEl.style.color = 'var(--danger)';
