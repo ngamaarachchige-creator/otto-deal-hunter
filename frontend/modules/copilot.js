@@ -8,6 +8,30 @@ let isProcessing = false;
 let currentAbortController = null;
 let chatHistory = [];
 
+// Rotating "thinking" words while OTTO works — swaps to "Scraping" once a
+// real scrape job is confirmed running (via the scrape-logs poll), rather
+// than guessing intent from the user's message text.
+const THINKING_WORDS = [
+  'Scouting', 'Sniffing', 'Appraising', 'Benchmarking', 'Snooping', 'Prowling',
+  'Sleuthing', 'Combing', 'Canvassing', 'Sizing up', 'Vetting', 'Cross-checking',
+  'Triangulating', 'Squinting', 'Haggling', 'Valuing', 'Weighing', 'Digging',
+  'Casing', 'Surveying', 'Scoping', 'Eyeballing', 'Sussing out', 'Verifying', 'Pricing',
+];
+
+function startThinkingRotation(labelEl) {
+  if (!labelEl) return null;
+  let i = 0;
+  let timeoutId = null;
+  const tick = () => {
+    labelEl.textContent = THINKING_WORDS[i] + '…';
+    i = (i + 1) % THINKING_WORDS.length;
+    const delay = 2600 + Math.random() * 400; // 2.6–3s, randomized so it doesn't feel mechanical
+    timeoutId = setTimeout(tick, delay);
+  };
+  tick();
+  return { stop: () => clearTimeout(timeoutId) };
+}
+
 export function initCopilot() {
   const trigger = document.getElementById('ottoCopilotTrigger');
   const closeBtn = document.getElementById('ottoCopilotClose');
@@ -201,11 +225,11 @@ export async function sendCopilotMessage(userText) {
   agentMsgEl.id = agentMsgId;
   agentMsgEl.innerHTML = `
     <div class="agent-avatar">
-      <img src="/static/assets/mascot.svg" alt="OTTO" width="28" height="28">
+      <img src="/static/assets/bloub-cercle-attentif-encre-anime_circle.svg" alt="OTTO" width="28" height="28">
     </div>
     <div class="agent-body" id="${agentMsgId}_body">
       <div class="agent-run-log">
-        <div class="run-step active"><span class="step-dot"></span> Initiating OTTO deal scout agent...</div>
+        <div class="run-step active"><span class="step-dot"></span> <span id="${agentMsgId}_thinking_label"></span></div>
       </div>
       <div class="copilot-live-terminal-wrap" id="${agentMsgId}_terminal_wrap" style="display: none;">
         <div class="copilot-terminal-header">
@@ -221,6 +245,8 @@ export async function sendCopilotMessage(userText) {
   const targetBody = document.getElementById(`${agentMsgId}_body`);
   const terminalWrap = document.getElementById(`${agentMsgId}_terminal_wrap`);
   const terminalBody = document.getElementById(`${agentMsgId}_terminal_body`);
+  const thinkingLabel = document.getElementById(`${agentMsgId}_thinking_label`);
+  let thinkingInterval = startThinkingRotation(thinkingLabel);
 
   let lastLogCount = 0;
   const pollInterval = setInterval(async () => {
@@ -230,6 +256,11 @@ export async function sendCopilotMessage(userText) {
         const pData = await pRes.json();
         const logs = pData.logs || [];
         if (logs.length > 0) {
+          if (thinkingInterval) {
+            thinkingInterval.stop();
+            thinkingInterval = null;
+            if (thinkingLabel) thinkingLabel.textContent = 'Scraping…';
+          }
           if (terminalWrap && terminalWrap.style.display === 'none') {
             terminalWrap.style.display = 'block';
             feed.scrollTop = feed.scrollHeight;
@@ -263,6 +294,7 @@ export async function sendCopilotMessage(userText) {
     }
 
     clearInterval(pollInterval);
+    if (thinkingInterval) thinkingInterval.stop();
     const data = await res.json();
     const thoughtSteps = data.thought_steps || [];
     const logEl = targetBody.querySelector('.agent-run-log');
@@ -354,6 +386,7 @@ export async function sendCopilotMessage(userText) {
 
   } catch (err) {
     clearInterval(pollInterval);
+    if (thinkingInterval) thinkingInterval.stop();
     if (err.name === 'AbortError') {
       targetBody.innerHTML = `
         <div style="color: var(--ink-secondary); font-size: 0.82rem; font-style: italic;">
