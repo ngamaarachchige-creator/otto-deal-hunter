@@ -1,290 +1,198 @@
-// OTTO mascot — live vanilla-JS port of jeremy-prt/bloub's SVG bot engine (MIT).
-// Renders BotEngine.sample(t) into imperative SVG, drives it off OTTO app events.
-import { BotEngine } from '../assets/mascot/bot/engine.js';
-import { EXPRESSION_BY_ID } from '../assets/mascot/bot/expressions.js';
-import { SHAPE_BY_ID, COLOR_BY_ID, mixHex } from '../assets/mascot/bot/skins.js';
-import { DEMI_VIEWBOX, RAYON } from '../assets/mascot/bot/repere.js';
-import { STATE_BY_ID } from '../assets/mascot/bot/states.js';
-import { lookTarget, TURN_TIME } from '../assets/mascot/bot/gaze.js';
-import { easings, clamp } from '../assets/mascot/bot/math.js';
+// Lanka Car Hunter · Interactive AI Scout Mascot (Bloub-style organic agent)
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
-
-const SHAPE_ID = 'squircle';
-const COLOR_ID = 'encre';
-const EXPRESSION_ID = 'attentif';
-const SLEEP_AFTER_MS = 5 * 60 * 1000;
-
-function el(tag, attrs = {}) {
-  const node = document.createElementNS(SVG_NS, tag);
-  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
-  return node;
-}
-
-export class OttoMascot {
-  constructor(containerId = 'mascotContainer', opts = {}) {
+export class ScoutMascot {
+  constructor(containerId = 'mascotContainer') {
     this.container = document.getElementById(containerId);
     if (!this.container) return;
-    this.size = opts.size ?? 48;
-    this.paper = opts.paper ?? '#f7f5f0';
 
-    this.shapeRadii = SHAPE_BY_ID.get(SHAPE_ID)?.radii ?? null;
-    this.ink = COLOR_BY_ID.get(COLOR_ID)?.hex ?? '#0a0a0c';
-    this.expression = EXPRESSION_BY_ID.get(EXPRESSION_ID) ?? null;
+    this.state = 'idle'; // idle, searching, excited, inspecting
+    this.targetX = 0;
+    this.targetY = 0;
+    this.currX = 0;
+    this.currY = 0;
+    this.blinkProgress = 0;
+    this.isBlinking = false;
+    this.breathTime = 0;
 
-    this.engine = new BotEngine(RAYON, 'idle', this.shapeRadii, this.expression);
-    this.uid = Math.random().toString(36).slice(2, 8);
-
-    this.clock = 0;
-    this.last = 0;
-    this.pointer = null;
-    this.aiming = false;
-    this.turnSince = 0;
-    this.lastInteraction = performance.now();
-    this.sleeping = false;
-
-    this._buildDom();
-    this._bindEvents();
-    this._raf = requestAnimationFrame((ms) => this._tick(ms));
+    this.initCanvas();
+    this.bindEvents();
+    this.startLoop();
   }
 
-  _buildDom() {
+  initCanvas() {
     this.container.innerHTML = '';
-    const vb = DEMI_VIEWBOX;
-    this.svg = el('svg', {
-      width: this.size,
-      height: this.size,
-      viewBox: `${-vb} ${-vb} ${vb * 2} ${vb * 2}`,
-      role: 'img',
-      'aria-label': 'OTTO mascot',
-      style: 'cursor:pointer;display:block'
+    this.canvas = document.createElement('canvas');
+    this.canvas.width = 120;
+    this.canvas.height = 120;
+    this.canvas.style.width = '52px';
+    this.canvas.style.height = '52px';
+    this.canvas.style.cursor = 'pointer';
+    this.canvas.title = 'Click me to say hi!';
+    this.ctx = this.canvas.getContext('2d');
+    this.container.appendChild(this.canvas);
+  }
+
+  bindEvents() {
+    window.addEventListener('mousemove', (e) => {
+      if (!this.canvas) return;
+      const rect = this.canvas.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const dist = Math.hypot(dx, dy);
+      const maxDist = 7;
+      const factor = Math.min(1, dist / 400);
+
+      this.targetX = (dx / (dist || 1)) * maxDist * factor;
+      this.targetY = (dy / (dist || 1)) * maxDist * factor;
     });
 
-    const defs = el('defs');
-    this.mask = el('mask', { id: `bot-mask-${this.uid}`, maskUnits: 'userSpaceOnUse', x: -vb, y: -vb, width: vb * 2, height: vb * 2 });
-    this.maskBody = el('path', { fill: '#fff' });
-    this.maskNotch = el('circle', { fill: '#000' });
-    this.mask.appendChild(this.maskBody);
-    this.mask.appendChild(this.maskNotch);
-    defs.appendChild(this.mask);
-    this.gradDefs = defs;
-    this.svg.appendChild(defs);
-
-    this.backArcs = el('g', { fill: 'none', 'stroke-linecap': 'round' });
-    this.dotsBehind = el('g');
-    this.bodyGroup = el('g');
-    this.bodyBg = el('path', { fill: this.paper });
-    this.bodyFill = el('g', { mask: `url(#bot-mask-${this.uid})` });
-    this.bodyRect = el('rect', { x: -vb, y: -vb, width: vb * 2, height: vb * 2, fill: this.ink });
-    this.bodyFill.appendChild(this.bodyRect);
-    this.bodyGroup.appendChild(this.bodyBg);
-    this.bodyGroup.appendChild(this.bodyFill);
-    this.dotsFront = el('g');
-    this.notifCircle = el('circle', { fill: '#2496e8', style: 'display:none' });
-    this.frontArcs = el('g', { fill: 'none', 'stroke-linecap': 'round' });
-
-    this.svg.appendChild(this.backArcs);
-    this.svg.appendChild(this.dotsBehind);
-    this.svg.appendChild(this.bodyGroup);
-    this.svg.appendChild(this.dotsFront);
-    this.svg.appendChild(this.notifCircle);
-    this.svg.appendChild(this.frontArcs);
-
-    this.container.appendChild(this.svg);
-    this.svg.title = 'OTTO — your AI deal scout';
-  }
-
-  _bindEvents() {
-    window.addEventListener('pointermove', (e) => {
-      if (e.pointerType === 'touch') return;
-      this.pointer = { x: e.clientX, y: e.clientY };
-      this.lastInteraction = performance.now();
-      if (this.sleeping) this._wake();
-    });
-    document.addEventListener('pointerleave', () => { this.pointer = null; });
-    this.svg.addEventListener('click', () => {
-      this.lastInteraction = performance.now();
-      if (this.sleeping) { this._wake(); return; }
-      this.triggerState('wink', 1600);
-    });
-  }
-
-  _wake() {
-    this.sleeping = false;
-    this.engine.setState('idle', this.clock);
-  }
-
-  // OTTO's semantic event names -> bloub's animation-catalogue states.
-  static STATE_MAP = {
-    inspecting: 'thinking',
-    thinking: 'thinking',
-    searching: 'thinking',
-    scraping: 'orbit',
-    excited: 'wide',
-    hotdeal: 'notify',
-    error: 'alert',
-    wink: 'wink'
-  };
-
-  // Trigger a transient state, then fall back to `idle` unless another call
-  // supersedes it first. Accepts either an OTTO event name or a raw bloub state id.
-  triggerState(name, holdMs = 2000) {
-    const state = OttoMascot.STATE_MAP[name] ?? name;
-    if (!STATE_BY_ID.has(state)) return;
-    this.sleeping = false;
-    this.lastInteraction = performance.now();
-    this.engine.setState(state, this.clock);
-    if (this._flashTimer) clearTimeout(this._flashTimer);
-    this._flashTimer = setTimeout(() => {
-      if (this.engine.state === state) this.engine.setState('idle', this.clock);
-    }, holdMs);
-  }
-
-  // Hold a looping state until explicitly released back to idle (e.g. full scrape running).
-  setBusy(name) {
-    const state = OttoMascot.STATE_MAP[name] ?? name;
-    if (!STATE_BY_ID.has(state)) return;
-    this.sleeping = false;
-    this.lastInteraction = performance.now();
-    if (this._flashTimer) { clearTimeout(this._flashTimer); this._flashTimer = null; }
-    this.engine.setState(state, this.clock);
-  }
-
-  idle() {
-    if (this._flashTimer) { clearTimeout(this._flashTimer); this._flashTimer = null; }
-    this.engine.setState('idle', this.clock);
-  }
-
-  _aim() {
-    if (!STATE_BY_ID.get(this.engine.state)?.baseFace) {
-      if (this.aiming) { this.engine.setLook(null, this.clock, TURN_TIME); this.aiming = false; }
-      return;
+    if (this.canvas) {
+      this.canvas.addEventListener('click', () => {
+        this.triggerState('excited', 3000);
+      });
     }
-    const box = this.svg.getBoundingClientRect();
-    if (!box || box.width === 0 || box.height === 0) return;
-    if (!this.aiming) this.turnSince = this.clock;
-    const halfW = Math.max(1, window.innerWidth / 2);
-    const halfH = Math.max(1, window.innerHeight / 2);
-    this.engine.setLook(
-      lookTarget({
-        nx: this.pointer ? clamp((this.pointer.x - (box.left + box.width / 2)) / halfW, -1, 1) : 0,
-        ny: this.pointer ? clamp((this.pointer.y - (box.top + box.height / 2)) / halfH, -1, 1) : 0,
-        tour: easings.easeOutQuint(clamp((this.clock - this.turnSince) / TURN_TIME)),
-        pointer: this.pointer !== null
-      }),
-      this.clock
-    );
-    this.aiming = true;
-  }
 
-  _dotAttrs(dot) {
-    const fill = dot.color ?? (dot.depth === undefined ? this.ink : mixHex(this.paper, this.ink, dot.depth));
-    if (dot.d) return { fill, opacity: dot.opacity, d: dot.d, transform: `translate(${dot.x} ${dot.y}) rotate(${dot.rot ?? 0}) scale(${RAYON})` };
-    return { fill, opacity: dot.opacity, cx: dot.x, cy: dot.y, r: dot.r };
-  }
-
-  _renderDots(group, dots, keyPrefix) {
-    while (group.children.length > dots.length) group.removeChild(group.lastChild);
-    dots.forEach((dot, i) => {
-      const isPath = !!dot.d;
-      let node = group.children[i];
-      if (!node || node.tagName !== (isPath ? 'path' : 'circle')) {
-        if (node) group.removeChild(node);
-        node = el(isPath ? 'path' : 'circle');
-        group.insertBefore(node, group.children[i] ?? null);
+    setInterval(() => {
+      if (Math.random() > 0.3 && !this.isBlinking) {
+        this.blink();
       }
-      const attrs = this._dotAttrs(dot);
-      for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
-    });
+    }, 3500);
   }
 
-  _renderArcs(group, side, arcs) {
-    while (group.children.length > arcs.length) group.removeChild(group.lastChild);
-    arcs.forEach((arc, i) => {
-      let node = group.children[i];
-      if (!node) { node = el('path'); group.appendChild(node); }
-      let grad = this.gradDefs.querySelector(`#${this.uid}-${arc.id}`);
-      if (!grad) {
-        grad = el('linearGradient', { id: `${this.uid}-${arc.id}`, gradientUnits: 'userSpaceOnUse' });
-        this.gradDefs.appendChild(grad);
+  blink() {
+    this.isBlinking = true;
+    let progress = 0;
+    const step = () => {
+      progress += 0.2;
+      if (progress <= 1) {
+        this.blinkProgress = Math.sin(progress * Math.PI);
+        requestAnimationFrame(step);
+      } else {
+        this.blinkProgress = 0;
+        this.isBlinking = false;
       }
-      grad.setAttribute('x1', arc.grad.x1);
-      grad.setAttribute('y1', arc.grad.y1);
-      grad.setAttribute('x2', arc.grad.x2);
-      grad.setAttribute('y2', arc.grad.y2);
-      grad.innerHTML = '';
-      arc.grad.stops.forEach((c, si) => grad.appendChild(el('stop', { offset: si / (arc.grad.stops.length - 1), 'stop-color': c })));
-      node.setAttribute('d', side === 'front' ? arc.front : arc.back);
-      node.setAttribute('stroke', `url(#${this.uid}-${arc.id})`);
-      node.setAttribute('stroke-width', arc.width);
-      node.setAttribute('opacity', arc.opacity);
-    });
+    };
+    step();
   }
 
-  _render(frame) {
-    this.maskBody.setAttribute('d', frame.bodyPath);
-    while (this.mask.querySelectorAll('.eye-mask').length > frame.eyes.length) {
-      this.mask.removeChild(this.mask.querySelector('.eye-mask:last-of-type'));
-    }
-    frame.eyes.forEach((eye, i) => {
-      let node = this.mask.querySelectorAll('.eye-mask')[i];
-      if (!node) {
-        node = el('path', { class: 'eye-mask', fill: '#000' });
-        this.mask.insertBefore(node, this.maskNotch);
+  triggerState(stateName, duration = 3000) {
+    this.state = stateName;
+    if (this.resetTimer) clearTimeout(this.resetTimer);
+    this.resetTimer = setTimeout(() => {
+      this.state = 'idle';
+    }, duration);
+  }
+
+  startLoop() {
+    const render = () => {
+      this.update();
+      this.draw();
+      requestAnimationFrame(render);
+    };
+    requestAnimationFrame(render);
+  }
+
+  update() {
+    this.breathTime += 0.04;
+    this.currX += (this.targetX - this.currX) * 0.14;
+    this.currY += (this.targetY - this.currY) * 0.14;
+  }
+
+  draw() {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, 120, 120);
+
+    const cx = 60;
+    const cy = 60;
+    
+    // Breathing squash & stretch
+    const breathScaleY = 1 + Math.sin(this.breathTime) * 0.035;
+    const breathScaleX = 1 - Math.sin(this.breathTime) * 0.025;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(breathScaleX, breathScaleY);
+
+    // Mascot Body (Bloub deep ink #0f172a / #17203a)
+    ctx.beginPath();
+    ctx.fillStyle = '#0f172a';
+    ctx.shadowColor = 'rgba(15, 23, 42, 0.18)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 4;
+
+    const r = 44;
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Highlight rim
+    ctx.beginPath();
+    ctx.arc(0, -2, r - 2, Math.PI * 0.85, Math.PI * 2.15);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Eyes
+    const eyeSpacing = 16;
+    const eyeY = -4 + this.currY;
+    const eyeXOffset = this.currX;
+
+    const drawEye = (x) => {
+      ctx.save();
+      ctx.translate(x + eyeXOffset, eyeY);
+
+      if (this.state === 'excited') {
+        // Happy arch eyes (^ ^)
+        ctx.beginPath();
+        ctx.arc(0, 2, 7, Math.PI * 1.15, Math.PI * 1.85);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      } else if (this.state === 'searching') {
+        // Scanning radar glow eye
+        ctx.beginPath();
+        const eyeHeight = Math.max(1, 8 * (1 - this.blinkProgress));
+        ctx.ellipse(0, 0, 7.5, eyeHeight, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+      } else {
+        // Normal wide curious eye
+        const eyeHeight = Math.max(1, 8.5 * (1 - this.blinkProgress));
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 7.5, eyeHeight, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+
+        if (eyeHeight > 3) {
+          ctx.beginPath();
+          ctx.arc(2.5, -2.5, 2.2, 0, Math.PI * 2);
+          ctx.fillStyle = '#0f172a';
+          ctx.fill();
+        }
       }
-      node.setAttribute('d', eye.d);
-      node.setAttribute('transform', eye.matrix);
-      node.setAttribute('opacity', eye.alpha);
-    });
+      ctx.restore();
+    };
 
-    if (frame.notch) {
-      this.maskNotch.setAttribute('cx', frame.notch.x);
-      this.maskNotch.setAttribute('cy', frame.notch.y);
-      this.maskNotch.setAttribute('r', frame.notch.r);
-      this.maskNotch.style.display = '';
-    } else {
-      this.maskNotch.style.display = 'none';
-    }
+    drawEye(-eyeSpacing);
+    drawEye(eyeSpacing);
 
-    this.bodyBg.setAttribute('d', frame.bodyPath);
-    this.bodyGroup.setAttribute('opacity', frame.bodyAlpha);
+    // Cute blush cheeks
+    ctx.fillStyle = 'rgba(244, 63, 94, 0.28)';
+    ctx.beginPath();
+    ctx.ellipse(-eyeSpacing - 6, 8 + this.currY * 0.5, 5, 2.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(eyeSpacing + 6, 8 + this.currY * 0.5, 5, 2.5, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-    this._renderDots(this.dotsBehind, frame.dotsBehind ? frame.dots : [], 'db');
-    this._renderDots(this.dotsFront, frame.dotsBehind ? [] : frame.dots, 'df');
-
-    if (frame.notif) {
-      this.notifCircle.setAttribute('cx', frame.notif.x);
-      this.notifCircle.setAttribute('cy', frame.notif.y);
-      this.notifCircle.setAttribute('r', frame.notif.r);
-      this.notifCircle.style.display = '';
-    } else {
-      this.notifCircle.style.display = 'none';
-    }
-
-    this._renderArcs(this.backArcs, 'back', frame.arcs);
-    this._renderArcs(this.frontArcs, 'front', frame.arcs);
-  }
-
-  _tick(ms) {
-    this._raf = requestAnimationFrame((t) => this._tick(t));
-    const dt = this.last ? Math.min((ms - this.last) / 1000, 0.064) : 0;
-    this.last = ms;
-    this.clock += dt;
-
-    if (!this.sleeping && performance.now() - this.lastInteraction > SLEEP_AFTER_MS && this.engine.state === 'idle') {
-      this.sleeping = true;
-      this.engine.setState('sleep', this.clock);
-    }
-
-    this._aim();
-    this._render(this.engine.sample(this.clock));
-  }
-
-  destroy() {
-    cancelAnimationFrame(this._raf);
-    if (this._flashTimer) clearTimeout(this._flashTimer);
+    ctx.restore();
   }
 }
-
-// Legacy alias — old call sites used `ScoutMascot`.
-export { OttoMascot as ScoutMascot };
