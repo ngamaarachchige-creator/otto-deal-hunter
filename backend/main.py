@@ -471,3 +471,16 @@ def serve_root():
     if os.path.exists(index_file):
         return FileResponse(index_file)
     return {"message": "Lanka Car Hunter Backend API is running."}
+
+
+@app.get("/api/copilot/status")
+def get_copilot_status():
+    from .copilot import OLLAMA_HOST, OLLAMA_MODEL
+    import requests
+    try:
+        resp = requests.get(OLLAMA_HOST, timeout=1.5)
+        if resp.status_code == 200:
+            return {"active": True, "model": OLLAMA_MODEL}
+    except Exception:
+        pass
+    return {"active": False, "model": OLLAMA_MODEL}

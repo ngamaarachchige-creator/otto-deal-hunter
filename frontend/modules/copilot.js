@@ -52,6 +52,9 @@ export function initCopilot() {
       }
     });
   });
+
+  // Initial check on load
+  checkOllamaStatus();
 }
 
 export function toggleCopilot() {
@@ -59,6 +62,26 @@ export function toggleCopilot() {
     closeCopilot();
   } else {
     openCopilot();
+  }
+}
+
+export async function checkOllamaStatus() {
+  const dot = document.getElementById('ottoCopilotStatusDot');
+  const subtitle = document.getElementById('ottoCopilotSubtitle');
+  if (!dot || !subtitle) return;
+  try {
+    const res = await fetch('/api/copilot/status');
+    const data = await res.json();
+    if (data.active) {
+      dot.style.backgroundColor = '#10b981';
+      subtitle.innerHTML = `<span class="status-dot" id="ottoCopilotStatusDot" style="background: #10b981;"></span> ${data.model} (LAN Active)`;
+    } else {
+      dot.style.backgroundColor = '#ef4444';
+      subtitle.innerHTML = `<span class="status-dot" id="ottoCopilotStatusDot" style="background: #ef4444;"></span> ${data.model} (LAN Offline)`;
+    }
+  } catch (e) {
+    dot.style.backgroundColor = '#ef4444';
+    subtitle.innerHTML = `<span class="status-dot" id="ottoCopilotStatusDot" style="background: #ef4444;"></span> qwen3-vl:8b (LAN Offline)`;
   }
 }
 
@@ -70,6 +93,7 @@ export function openCopilot() {
   trigger?.classList.add('hidden');
   isCopilotOpen = true;
   document.getElementById('ottoCopilotInput')?.focus();
+  checkOllamaStatus();
 }
 
 export function closeCopilot() {
@@ -299,11 +323,24 @@ export async function sendCopilotMessage(userText) {
         </div>
       `;
     } else {
+      const isConnectionError = err.message.toLowerCase().includes('192.168.1.23') || 
+                               err.message.toLowerCase().includes('11434') || 
+                               err.message.toLowerCase().includes('failed to communicate');
+      const errorMsg = isConnectionError 
+        ? "Lankan GPU rig offline! 🔴 Ensure your TUFGAMING-0001 PC (192.168.1.23) is powered on and Ollama is running."
+        : err.message;
       targetBody.innerHTML = `
-        <div style="color: var(--danger); font-size: 0.85rem;">
-          ${icon('alertTriangle')} Error: ${escapeHtml(err.message)}
+        <div style="color: var(--danger); font-size: 0.85rem; font-weight: 500; line-height: 1.4;">
+          ${icon('alertTriangle')} Error: ${escapeHtml(errorMsg)}
         </div>
       `;
+      // Update LAN status indicator immediately to Offline
+      const dot = document.getElementById('ottoCopilotStatusDot');
+      const subtitle = document.getElementById('ottoCopilotSubtitle');
+      if (dot && subtitle) {
+        dot.style.backgroundColor = '#ef4444';
+        subtitle.innerHTML = `<span class="status-dot" id="ottoCopilotStatusDot" style="background: #ef4444;"></span> qwen3-vl:8b (LAN Offline)`;
+      }
     }
   } finally {
     setProcessingState(false);
@@ -353,3 +390,4 @@ window.stopCopilotGeneration = stopGeneration;
 window.editCopilotPrompt = editPrompt;
 window.copyCopilotResponse = copyResponseText;
 window.saveCopilotCarToPipeline = saveCopilotCarToPipeline;
+window.checkOllamaStatus = checkOllamaStatus;
