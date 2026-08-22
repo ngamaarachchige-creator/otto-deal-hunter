@@ -67,6 +67,7 @@ export function toggleCopilot() {
 
 export async function checkOllamaStatus() {
   const dot = document.getElementById('ottoCopilotStatusDot');
+  const triggerDot = document.getElementById('ottoCopilotTriggerDot');
   const subtitle = document.getElementById('ottoCopilotSubtitle');
   if (!dot || !subtitle) return;
   try {
@@ -74,13 +75,16 @@ export async function checkOllamaStatus() {
     const data = await res.json();
     if (data.active) {
       dot.style.backgroundColor = '#10b981';
+      if (triggerDot) triggerDot.style.backgroundColor = '#10b981';
       subtitle.innerHTML = `<span class="status-dot" id="ottoCopilotStatusDot" style="background: #10b981;"></span> ${data.model} (LAN Active)`;
     } else {
       dot.style.backgroundColor = '#ef4444';
+      if (triggerDot) triggerDot.style.backgroundColor = '#ef4444';
       subtitle.innerHTML = `<span class="status-dot" id="ottoCopilotStatusDot" style="background: #ef4444;"></span> ${data.model} (LAN Offline)`;
     }
   } catch (e) {
     dot.style.backgroundColor = '#ef4444';
+    if (triggerDot) triggerDot.style.backgroundColor = '#ef4444';
     subtitle.innerHTML = `<span class="status-dot" id="ottoCopilotStatusDot" style="background: #ef4444;"></span> qwen3-vl:8b (LAN Offline)`;
   }
 }
@@ -336,9 +340,11 @@ export async function sendCopilotMessage(userText) {
       `;
       // Update LAN status indicator immediately to Offline
       const dot = document.getElementById('ottoCopilotStatusDot');
+      const triggerDot = document.getElementById('ottoCopilotTriggerDot');
       const subtitle = document.getElementById('ottoCopilotSubtitle');
       if (dot && subtitle) {
         dot.style.backgroundColor = '#ef4444';
+        if (triggerDot) triggerDot.style.backgroundColor = '#ef4444';
         subtitle.innerHTML = `<span class="status-dot" id="ottoCopilotStatusDot" style="background: #ef4444;"></span> qwen3-vl:8b (LAN Offline)`;
       }
     }
