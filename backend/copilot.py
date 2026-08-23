@@ -9,7 +9,7 @@ from backend.scrapers.analyzer import calculate_market_benchmarks, enrich_car_wi
 from backend.scrapers import RiyasewanaScraper, IkmanScraper
 from backend.database import upsert_cars_batch, get_pipeline_stages_summary
 
-OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://192.168.1.23:11434")
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://100.81.169.48:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3-vl:8b")
 
 COPILOT_SYSTEM_PROMPT = """You are OTTO, an autonomous vehicle acquisition and deal intelligence agent operating in Sri Lanka.

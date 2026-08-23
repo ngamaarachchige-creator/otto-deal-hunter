@@ -478,7 +478,7 @@ def get_copilot_status():
     from .copilot import OLLAMA_HOST, OLLAMA_MODEL
     import requests
     try:
-        resp = requests.get(OLLAMA_HOST, timeout=1.5)
+        resp = requests.get(OLLAMA_HOST, timeout=3)
         if resp.status_code == 200:
             return {"active": True, "model": OLLAMA_MODEL}
     except Exception:
