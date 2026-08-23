@@ -12,8 +12,17 @@ from backend.database import upsert_cars_batch, get_pipeline_stages_summary
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://100.81.169.48:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3-vl:8b")
 
+_DATE_NOTE = (
+    f"Today's real-world date is {datetime.now():%B %d, %Y}. Your training data has a cutoff before this "
+    f"date, so a listing's registration year (including {datetime.now().year} or newer) can be genuinely "
+    "real even if it postdates what you were trained on. Never call a listing fake or a scam just because "
+    "the year looks newer than you expect; only flag fraud for concrete red flags actually present in the data."
+)
+
 COPILOT_SYSTEM_PROMPT = """You are OTTO, an autonomous vehicle acquisition and deal intelligence agent operating in Sri Lanka.
 You are in a continuous conversation with a car buyer/flipper. Remember the conversation context and maintain topic continuity across turns.
+
+""" + _DATE_NOTE + """
 
 Capabilities & Tools:
 1. `search_market_deals`: Searches 1,981+ active Sri Lankan listings. Use this when the user mentions any car brand, model, price, or asks to search/find/check cars.
