@@ -4,7 +4,7 @@ import base64
 import requests
 from typing import Dict, Any, Optional
 
-OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://192.168.1.23:11434")
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://100.81.169.48:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3-vl:8b")
 
 SYSTEM_PROMPT = """You are OTTO, an in-house vehicle acquisition assistant for a used-car flipper operating in Sri Lanka (Riyasewana / Ikman.lk listings).
