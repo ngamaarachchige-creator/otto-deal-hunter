@@ -39,7 +39,10 @@ Assistant: <tool_call>{"name": "trigger_live_market_scrape", "arguments": {"quer
 User: "find cheap Celerio"
 Assistant: <tool_call>{"name": "search_market_deals", "arguments": {"query": "Celerio", "sort_by": "price_asc"}}</tool_call>
 User: "make it under 4 million lkr"
-Assistant: <tool_call>{"name": "search_market_deals", "arguments": {"query": "Celerio", "max_price": 4000000, "sort_by": "price_asc"}}</tool_call>"""
+Assistant: <tool_call>{"name": "search_market_deals", "arguments": {"query": "Celerio", "max_price": 4000000, "sort_by": "price_asc"}}</tool_call>
+
+User: "any make or model, just find good deals under 10 million with decent flip profit"
+Assistant: <tool_call>{"name": "search_market_deals", "arguments": {"query": "all", "max_price": 10000000, "sort_by": "discount_desc"}}</tool_call>"""
 
 TOOLS_SCHEMA = [
     {
@@ -244,7 +247,8 @@ def run_copilot_agent(user_message: str, history: Optional[List[Dict[str, str]]]
         "model": OLLAMA_MODEL,
         "messages": messages,
         "tools": TOOLS_SCHEMA,
-        "stream": False
+        "stream": False,
+        "think": False
     }
 
     try:
@@ -270,13 +274,9 @@ def run_copilot_agent(user_message: str, history: Optional[List[Dict[str, str]]]
         clean_response = re.sub(r"\n*\*?\(?\s*\d+\s*words?\s*\)?\*?\s*$", "", clean_response, flags=re.IGNORECASE).strip()
         clean_response = re.sub(r"\n*\*?\(?\s*word count:?\s*\d+\s*\w*\s*\)?\*?\s*$", "", clean_response, flags=re.IGNORECASE).strip()
         
-        # If content is empty (e.g. model output only thinking trace), generate fallback from thinking or prompt
+        # If content is empty, never surface the raw internal reasoning trace to the user.
         if not clean_response:
-            thinking = assistant_msg.get("thinking", "")
-            if thinking:
-                clean_response = thinking.split("\n")[-1].strip()
-            if not clean_response:
-                clean_response = "Got it! Let me know if you want me to search specific models or trigger a live scrape."
+            clean_response = "Got it! Let me know if you want me to search specific models or trigger a live scrape."
                 
         log_copilot_turn(user_message, [], ["Conversation response generated."], clean_response)
         return {
@@ -335,7 +335,8 @@ def run_copilot_agent(user_message: str, history: Optional[List[Dict[str, str]]]
                     "content": json.dumps({"deals_found": len(deals), "listings": deals_context})
                 }
             ],
-            "stream": False
+            "stream": False,
+            "think": False
         }
         try:
             synth_resp = requests.post(f"{OLLAMA_HOST}/api/chat", json=second_payload, timeout=60).json()
@@ -392,7 +393,8 @@ def run_copilot_agent(user_message: str, history: Optional[List[Dict[str, str]]]
                     "content": json.dumps({"status": "scraped", "new_listings": scrape_result['new_listings_count'], "deals": deals_context})
                 }
             ],
-            "stream": False
+            "stream": False,
+            "think": False
         }
         try:
             synth_resp = requests.post(f"{OLLAMA_HOST}/api/chat", json=second_payload, timeout=60).json()
