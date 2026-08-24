@@ -64,6 +64,7 @@ def init_db():
             status VARCHAR(50) DEFAULT 'active',
             first_seen_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
             last_seen_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            last_verified_at TIMESTAMPTZ,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
         );
@@ -143,6 +144,8 @@ def init_db():
             cursor.execute("ALTER TABLE cars ADD COLUMN first_seen_at DATETIME")
         if 'last_seen_at' not in columns:
             cursor.execute("ALTER TABLE cars ADD COLUMN last_seen_at DATETIME")
+        if 'last_verified_at' not in columns:
+            cursor.execute("ALTER TABLE cars ADD COLUMN last_verified_at DATETIME")
 
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS pipeline (

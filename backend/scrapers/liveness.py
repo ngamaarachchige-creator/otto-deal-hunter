@@ -34,9 +34,16 @@ def _is_dead(url: str, fetcher: Fetcher, retries: int = 2) -> bool:
 
 def verify_active_listings_liveness(
     max_workers: int = 5,
+    batch_size: Optional[int] = None,
     progress_callback: Optional[Callable[[int, int], None]] = None,
 ) -> dict:
-    """Checks every 'active' listing's URL and flips dead ones to 'stale'.
+    """Checks 'active' listings' URLs and flips dead ones to 'stale'.
+
+    With batch_size set, only the batch_size listings least-recently actively
+    verified are checked (oldest/never-verified first), so this can run as a
+    quick step on every scrape without re-checking the whole table (which is
+    slow and risks tripping the source site's rate limiter) — the full active
+    set just gets cycled through gradually across scrapes instead.
 
     Returns {"checked": n, "marked_stale": n}.
     """
@@ -46,12 +53,19 @@ def verify_active_listings_liveness(
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     else:
         cursor = conn.cursor()
-    cursor.execute("SELECT id, url FROM cars WHERE status = 'active' AND url IS NOT NULL AND url != ''")
+    query = (
+        "SELECT id, url FROM cars WHERE status = 'active' AND url IS NOT NULL AND url != '' "
+        "ORDER BY last_verified_at ASC NULLS FIRST"
+    )
+    if batch_size:
+        query += f" LIMIT {int(batch_size)}"
+    cursor.execute(query)
     rows = [(r["id"], r["url"]) for r in cursor.fetchall()]
     conn.close()
 
     total = len(rows)
     dead_ids = []
+    checked_ids = []
     fetcher = Fetcher()
     checked = 0
 
@@ -60,6 +74,7 @@ def verify_active_listings_liveness(
         for future in as_completed(future_to_id):
             car_id = future_to_id[future]
             checked += 1
+            checked_ids.append(car_id)
             try:
                 if future.result():
                     dead_ids.append(car_id)
@@ -68,11 +83,16 @@ def verify_active_listings_liveness(
             if progress_callback:
                 progress_callback(checked, total)
 
-    if dead_ids:
+    if checked_ids:
         conn = get_db_connection()
         cursor = conn.cursor()
         placeholder = "%s" if IS_POSTGRES else "?"
+        now_expr = "NOW()" if IS_POSTGRES else "CURRENT_TIMESTAMP"
         chunk = 500  # keep IN() clauses reasonably sized
+        for i in range(0, len(checked_ids), chunk):
+            batch = checked_ids[i:i + chunk]
+            in_clause = ",".join([placeholder] * len(batch))
+            cursor.execute(f"UPDATE cars SET last_verified_at = {now_expr} WHERE id IN ({in_clause})", batch)
         for i in range(0, len(dead_ids), chunk):
             batch = dead_ids[i:i + chunk]
             in_clause = ",".join([placeholder] * len(batch))

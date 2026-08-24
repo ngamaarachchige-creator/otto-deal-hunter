@@ -16,6 +16,7 @@ from .database import (
     update_pipeline_item, delete_pipeline_item, get_pipeline_stages_summary,
     get_db_connection, mark_stale_listings
 )
+from .scrapers.liveness import verify_active_listings_liveness
 from .scrapers import (
     RiyasewanaScraper, IkmanScraper,
     calculate_market_benchmarks, enrich_car_with_valuation, get_market_trends_summary
@@ -66,6 +67,14 @@ def run_scraping_worker(job_id: str, req: ScrapeRequest):
     stale_count = mark_stale_listings()
     if stale_count:
         job["logs"].append(f"Hid {stale_count} listing(s) not re-seen recently (likely sold/removed).")
+
+    job["logs"].append("Verifying a batch of existing listings are still live on-site...")
+    liveness_result = verify_active_listings_liveness(max_workers=5, batch_size=200)
+    if liveness_result["marked_stale"]:
+        job["logs"].append(
+            f"Confirmed {liveness_result['marked_stale']} of {liveness_result['checked']} checked "
+            f"listings are actually removed/sold; hid them."
+        )
 
     total_scraped = 0
     riya_count = 0
