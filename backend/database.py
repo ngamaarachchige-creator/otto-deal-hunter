@@ -186,6 +186,31 @@ def init_db():
         conn.commit()
         conn.close()
 
+def mark_stale_listings(stale_after_days: int = 14) -> int:
+    """Soft-hides ads not re-seen in a scrape for a while (likely sold/removed).
+
+    Rows are never deleted: keeping stale rows lets us detect reposts (same
+    seller relisting at a new price) and keeps market-average history intact.
+    Only the 'active' flag flips, which is what dashboard/AI search filter on.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if IS_POSTGRES:
+        cursor.execute(
+            "UPDATE cars SET status = 'stale' WHERE status = 'active' "
+            "AND last_seen_at < NOW() - INTERVAL '%s days'" % int(stale_after_days)
+        )
+    else:
+        cursor.execute(
+            "UPDATE cars SET status = 'stale' WHERE status = 'active' "
+            "AND last_seen_at < datetime('now', :cutoff)",
+            {"cutoff": f"-{int(stale_after_days)} days"}
+        )
+    affected = cursor.rowcount
+    conn.commit()
+    conn.close()
+    return affected
+
 def upsert_cars_batch(cars_list: List[Dict[str, Any]]) -> int:
     if not cars_list:
         return 0

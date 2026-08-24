@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from .database import (
     init_db, upsert_car, upsert_cars_batch, get_cars, get_car_count,
     update_pipeline_item, delete_pipeline_item, get_pipeline_stages_summary,
-    get_db_connection
+    get_db_connection, mark_stale_listings
 )
 from .scrapers import (
     RiyasewanaScraper, IkmanScraper,
@@ -62,6 +62,10 @@ def run_scraping_worker(job_id: str, req: ScrapeRequest):
     job["status"] = "running"
     query_desc = req.query or f"{req.make} {req.model}".strip() or "All Cars"
     job["logs"].append(f"Initiated search on [{', '.join(req.sources)}] for '{query_desc}'")
+
+    stale_count = mark_stale_listings()
+    if stale_count:
+        job["logs"].append(f"Hid {stale_count} listing(s) not re-seen recently (likely sold/removed).")
 
     total_scraped = 0
     riya_count = 0

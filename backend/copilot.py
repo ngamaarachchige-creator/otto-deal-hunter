@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 from backend.scrapers.analyzer import calculate_market_benchmarks, enrich_car_with_valuation, get_db_connection
 from backend.scrapers import RiyasewanaScraper, IkmanScraper
-from backend.database import upsert_cars_batch, get_pipeline_stages_summary
+from backend.database import upsert_cars_batch, get_pipeline_stages_summary, mark_stale_listings
 
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://100.81.169.48:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3-vl:8b")
@@ -143,7 +143,7 @@ def execute_search_deals(
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    sql = "SELECT * FROM cars WHERE price > 0"
+    sql = "SELECT * FROM cars WHERE price > 0 AND (status = 'active' OR status IS NULL)"
     params = {}
     
     # Extract year from query if present
@@ -198,6 +198,9 @@ def execute_live_scrape(query: str = "") -> Dict[str, Any]:
     COPILOT_SCRAPE_LOGS.clear()
     
     query_desc = query or "All Recent Ads"
+    stale_count = mark_stale_listings()
+    if stale_count:
+        COPILOT_SCRAPE_LOGS.append(f"Hid {stale_count} listing(s) not re-seen recently (likely sold/removed).")
     COPILOT_SCRAPE_LOGS.append(f"Initiating live search on Riyasewana for '{query_desc}'...")
     
     riya = RiyasewanaScraper()
