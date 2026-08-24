@@ -202,12 +202,14 @@ def execute_live_scrape(query: str = "") -> Dict[str, Any]:
     stale_count = mark_stale_listings()
     if stale_count:
         COPILOT_SCRAPE_LOGS.append(f"Hid {stale_count} listing(s) not re-seen recently (likely sold/removed).")
-    liveness_result = verify_active_listings_liveness(max_workers=5, batch_size=200)
+    liveness_result = verify_active_listings_liveness()
     if liveness_result["marked_stale"]:
         COPILOT_SCRAPE_LOGS.append(
             f"Confirmed {liveness_result['marked_stale']} of {liveness_result['checked']} checked "
             f"listings are actually removed/sold; hid them."
         )
+    if liveness_result.get("rate_limited"):
+        COPILOT_SCRAPE_LOGS.append("Source site started rate-limiting the liveness check; stopped early to avoid a ban.")
     COPILOT_SCRAPE_LOGS.append(f"Initiating live search on Riyasewana for '{query_desc}'...")
     
     riya = RiyasewanaScraper()

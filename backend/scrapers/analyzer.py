@@ -212,10 +212,20 @@ def enrich_car_with_valuation(car: Dict[str, Any], benchmarks: Dict[str, Dict[st
     est_profit = est_resale - (price + std_refurb_cost)
     car["potential_profit_lkr"] = max(0, round(est_profit, 0))
 
-    if discount_pct >= 15:
+    # A discount computed off only 1-2 loosely-matched comparable ads (LOW confidence)
+    # isn't a trustworthy signal — don't let it surface as a hot/good deal.
+    if discount_pct >= 15 and car["deal_confidence"] == "LOW":
+        car["valuation_rating"] = "UNVERIFIED_DEAL"
+        car["deal_score"] = 50
+        car["deal_tag"] = f"{discount_pct:.0f}% below market (unverified)"
+    elif discount_pct >= 15:
         car["valuation_rating"] = "HOT_DEAL"
         car["deal_score"] = min(99, int(75 + discount_pct))
         car["deal_tag"] = f"{discount_pct:.0f}% below market"
+    elif discount_pct >= 5 and car["deal_confidence"] == "LOW":
+        car["valuation_rating"] = "UNVERIFIED_DEAL"
+        car["deal_score"] = 50
+        car["deal_tag"] = f"{discount_pct:.0f}% below market (unverified)"
     elif discount_pct >= 5:
         car["valuation_rating"] = "GOOD_DEAL"
         car["deal_score"] = int(60 + discount_pct)

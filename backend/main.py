@@ -69,12 +69,14 @@ def run_scraping_worker(job_id: str, req: ScrapeRequest):
         job["logs"].append(f"Hid {stale_count} listing(s) not re-seen recently (likely sold/removed).")
 
     job["logs"].append("Verifying a batch of existing listings are still live on-site...")
-    liveness_result = verify_active_listings_liveness(max_workers=5, batch_size=200)
+    liveness_result = verify_active_listings_liveness()
     if liveness_result["marked_stale"]:
         job["logs"].append(
             f"Confirmed {liveness_result['marked_stale']} of {liveness_result['checked']} checked "
             f"listings are actually removed/sold; hid them."
         )
+    if liveness_result.get("rate_limited"):
+        job["logs"].append("Source site started rate-limiting the liveness check; stopped early to avoid a ban.")
 
     total_scraped = 0
     riya_count = 0
@@ -264,8 +266,8 @@ def get_dashboard_stats():
     conn.close()
 
     benchmarks = calculate_market_benchmarks()
-    sample_cars = get_cars({}, limit=500)
-    enriched = [enrich_car_with_valuation(c, benchmarks) for c in sample_cars]
+    all_cars = get_cars({}, limit=None)
+    enriched = [enrich_car_with_valuation(c, benchmarks) for c in all_cars]
     hot_deals_count = len([c for c in enriched if c.get("valuation_rating") == "HOT_DEAL"])
     total_potential_profit = sum(c.get("potential_profit_lkr", 0) for c in enriched if c.get("valuation_rating") == "HOT_DEAL")
 

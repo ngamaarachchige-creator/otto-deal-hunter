@@ -17,6 +17,9 @@ RATE_LIMITED_STATUS_CODES = {429}
 
 
 def _is_dead(url: str, fetcher: Fetcher, retries: int = 2) -> bool:
+    # Small per-request delay spreads out the batch so it doesn't read as a burst
+    # to the source site's anti-bot/rate-limiting.
+    time.sleep(0.4)
     for attempt in range(retries + 1):
         try:
             resp = fetcher.get(url, timeout=15)
@@ -25,16 +28,21 @@ def _is_dead(url: str, fetcher: Fetcher, retries: int = 2) -> bool:
             return False
         if resp.status in DEAD_STATUS_CODES:
             return True
-        if resp.status in RATE_LIMITED_STATUS_CODES and attempt < retries:
-            time.sleep(3 * (attempt + 1))
-            continue
+        if resp.status in RATE_LIMITED_STATUS_CODES:
+            # Getting rate-limited at all means we're going too fast for this site
+            # right now — bail out of the whole batch instead of hammering it further.
+            raise RateLimited()
         return False
     return False
 
 
+class RateLimited(Exception):
+    pass
+
+
 def verify_active_listings_liveness(
-    max_workers: int = 5,
-    batch_size: Optional[int] = None,
+    max_workers: int = 2,
+    batch_size: Optional[int] = 40,
     progress_callback: Optional[Callable[[int, int], None]] = None,
 ) -> dict:
     """Checks 'active' listings' URLs and flips dead ones to 'stale'.
@@ -71,15 +79,24 @@ def verify_active_listings_liveness(
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         future_to_id = {pool.submit(_is_dead, url, fetcher): car_id for car_id, url in rows}
+        rate_limited = False
         for future in as_completed(future_to_id):
             car_id = future_to_id[future]
+            try:
+                result = future.result()
+            except RateLimited:
+                # We're going too fast for this site right now — stop checking
+                # more listings this run rather than risk a longer ban.
+                rate_limited = True
+                for f in future_to_id:
+                    f.cancel()
+                break
+            except Exception:
+                result = False
             checked += 1
             checked_ids.append(car_id)
-            try:
-                if future.result():
-                    dead_ids.append(car_id)
-            except Exception:
-                pass
+            if result:
+                dead_ids.append(car_id)
             if progress_callback:
                 progress_callback(checked, total)
 
@@ -100,4 +117,4 @@ def verify_active_listings_liveness(
         conn.commit()
         conn.close()
 
-    return {"checked": total, "marked_stale": len(dead_ids)}
+    return {"checked": checked, "marked_stale": len(dead_ids), "rate_limited": rate_limited}
