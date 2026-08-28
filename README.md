@@ -22,3 +22,16 @@ Automated automotive arbitrage and vehicle deal acquisition intelligence platfor
 ```
 
 This creates a local virtualenv (if one doesn't already exist), installs dependencies, and starts the server. Open [http://localhost:8000](http://localhost:8000) in your browser.
+
+## ⚙️ Configuration
+
+Copy `.env.example` to `.env` and fill in what you need:
+
+- **`DATABASE_URL`** — optional. Leave blank to use local SQLite (`data/cars.db`); set to a Postgres/Supabase connection string to run against the cloud instead.
+- **`OLLAMA_HOST`** / **`OLLAMA_MODEL`** — required for the OTTO Copilot and AI Inspection features. Point this at wherever Ollama is running (localhost, LAN IP, or Tailscale IP) with a vision-capable model pulled (default `qwen3-vl:8b`).
+
+Without Ollama configured, the core scraping/valuation/CRM dashboard still works — only the AI copilot and photo inspection features are disabled.
+
+## 🧠 Agent Guidelines
+
+See [AGENTS.md](AGENTS.md) for the deal-scouting protocol OTTO's copilot follows (price-floor discipline, spec disaggregation, colour arbitrage, and flip math transparency).
