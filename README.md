@@ -16,13 +16,9 @@ Automated automotive arbitrage and vehicle deal acquisition intelligence platfor
 - **Dual-Mode Database**: SQLite local default with zero-config Supabase / Cloud PostgreSQL support.
 
 ## 🚀 Quick Start
-```bash
-# 1. Install dependencies
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
 
-# 2. Run the application
-python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+```bash
+./run.sh
 ```
-Open [http://localhost:8000](http://localhost:8000) in your browser.
+
+This creates a local virtualenv (if one doesn't already exist), installs dependencies, and starts the server. Open [http://localhost:8000](http://localhost:8000) in your browser.
