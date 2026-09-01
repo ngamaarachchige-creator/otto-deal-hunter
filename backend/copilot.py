@@ -10,7 +10,26 @@ from backend.scrapers import RiyasewanaScraper, IkmanScraper
 from backend.database import upsert_cars_batch, get_pipeline_stages_summary, mark_stale_listings
 from backend.scrapers.liveness import verify_active_listings_liveness
 
-OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://100.81.169.48:11434")
+def resolve_ollama_host() -> str:
+    env_host = os.environ.get("OLLAMA_HOST")
+    if env_host:
+        return env_host
+    # Probe active candidate hosts: LAN IP first, then Tailscale IP, then localhost
+    candidates = [
+        "http://192.168.1.23:11434",
+        "http://100.81.169.48:11434",
+        "http://127.0.0.1:11434"
+    ]
+    for c in candidates:
+        try:
+            r = requests.get(f"{c}/api/tags", timeout=1.0)
+            if r.status_code == 200:
+                return c
+        except Exception:
+            continue
+    return "http://192.168.1.23:11434"
+
+OLLAMA_HOST = resolve_ollama_host()
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3-vl:8b")
 
 _DATE_NOTE = (
@@ -273,7 +292,7 @@ def run_copilot_agent(user_message: str, history: Optional[List[Dict[str, str]]]
     }
 
     try:
-        resp = requests.post(f"{OLLAMA_HOST}/api/chat", json=payload, timeout=60)
+        resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=payload, timeout=60)
         resp.raise_for_status()
         data = resp.json()
     except Exception as e:
@@ -360,7 +379,7 @@ def run_copilot_agent(user_message: str, history: Optional[List[Dict[str, str]]]
             "think": False
         }
         try:
-            synth_resp = requests.post(f"{OLLAMA_HOST}/api/chat", json=second_payload, timeout=60).json()
+            synth_resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=second_payload, timeout=60).json()
             final_text = synth_resp.get("message", {}).get("content", "").strip()
         except Exception:
             final_text = f"Found {len(deals)} top matching deals in the market:"
@@ -418,7 +437,7 @@ def run_copilot_agent(user_message: str, history: Optional[List[Dict[str, str]]]
             "think": False
         }
         try:
-            synth_resp = requests.post(f"{OLLAMA_HOST}/api/chat", json=second_payload, timeout=60).json()
+            synth_resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=second_payload, timeout=60).json()
             final_text = synth_resp.get("message", {}).get("content", "").strip()
         except Exception:
             final_text = f"Live scrape completed! Ingested {scrape_result['new_listings_count']} listings. Here are the top results:"

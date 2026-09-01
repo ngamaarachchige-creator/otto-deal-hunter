@@ -490,15 +490,16 @@ def serve_root():
 
 @app.get("/api/copilot/status")
 def get_copilot_status():
-    from .copilot import OLLAMA_HOST, OLLAMA_MODEL
+    from .copilot import resolve_ollama_host, OLLAMA_MODEL
     import requests
+    host = resolve_ollama_host()
     try:
-        resp = requests.get(OLLAMA_HOST, timeout=3)
+        resp = requests.get(host, timeout=2)
         if resp.status_code == 200:
-            return {"active": True, "model": OLLAMA_MODEL}
+            return {"active": True, "model": OLLAMA_MODEL, "host": host}
     except Exception:
         pass
-    return {"active": False, "model": OLLAMA_MODEL}
+    return {"active": False, "model": OLLAMA_MODEL, "host": host}
 
 @app.get("/api/copilot/scrape-logs")
 def get_copilot_scrape_logs():
