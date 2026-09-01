@@ -316,15 +316,12 @@
           <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--ink-navy); letter-spacing: -0.02em;">AI Vehicle Deal Dossiers</h2>
           <p style="font-size: 0.85rem; color: var(--ink-secondary); margin-top: 0.25rem;">Real-time market floor intelligence, fuel economy ratings, and flip profit breakdowns</p>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <div class="dossier-search-wrap">
           <label class="font-mono" style="font-size: 0.8rem; color: var(--ink-secondary);">Target Model:</label>
-          <select id="dossierModelSelect" class="custom-select" style="min-width: 230px;" onchange="window.selectDossierModel(this.value)">
-            <option value="aqua_2014" selected>Toyota Aqua (2014)</option>
-            <option value="celerio_2015">Suzuki Celerio (2015)</option>
-            <option value="swift_2010">Suzuki Swift (2010)</option>
-            <option value="vitz_2011">Toyota Vitz KSP90 (2011)</option>
-            <option value="wagonr_2015">Suzuki Wagon R Stingray (2015)</option>
-          </select>
+          <div class="dossier-search-box">
+            <input type="text" id="dossierSearchInput" class="dossier-search-input" placeholder="Search any indexed make/model/year…" autocomplete="off">
+            <div id="dossierSearchResults" class="dossier-search-results"></div>
+          </div>
         </div>
       </div>
 

@@ -548,6 +548,107 @@ header {
   box-shadow: 0 0 0 3px rgba(23, 32, 58, 0.08);
 }
 
+/* Dossier live model search — searches every indexed make/model/year, not a fixed shortlist */
+.dossier-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dossier-search-box {
+  position: relative;
+  min-width: 280px;
+}
+
+.dossier-search-input {
+  width: 100%;
+  min-width: 280px;
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 0.6rem 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--ink-navy);
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  min-height: 44px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.dossier-search-input:hover {
+  background-color: #ffffff;
+  border-color: var(--line-dark);
+}
+
+.dossier-search-input:focus {
+  background-color: #ffffff;
+  border-color: var(--ink-navy);
+  box-shadow: 0 0 0 3px rgba(23, 32, 58, 0.08);
+}
+
+.dossier-search-results {
+  display: none;
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  width: 340px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px rgba(23, 32, 58, 0.14);
+  z-index: 50;
+  padding: 0.4rem;
+}
+
+.dossier-search-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.dossier-search-item:hover {
+  background: var(--surface-subtle);
+}
+
+.dossier-search-item-name {
+  color: var(--ink-navy);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dossier-search-item-year {
+  font-family: var(--font-mono);
+  color: var(--ink-secondary);
+  font-weight: 500;
+  margin-left: 0.3rem;
+}
+
+.dossier-search-item-meta {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--ink-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dossier-search-empty {
+  padding: 0.85rem 0.7rem;
+  font-size: 0.8rem;
+  color: var(--ink-secondary);
+  text-align: center;
+}
+
 .custom-input {
   background-color: rgba(255, 255, 255, 0.9);
   

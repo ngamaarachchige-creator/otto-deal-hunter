@@ -128,15 +128,139 @@ export const DOSSIER_MODELS = {
   }
 };
 
-let currentSelectedModelKey = 'aqua_2014';
+// Curated mechanic/fuel notes, indexed by normalized "make|model|year" so any live search
+// result that happens to match one of the hand-authored profiles above still gets the
+// real inspection notes attached — the market numbers themselves always come from the
+// live database, never from these hardcoded figures (which is what caused the stale
+// "10M+ for a 2011 Sorento" bug in the first place).
+function curatedKey(make, model, year) {
+  return `${make}|${model}|${year}`.toLowerCase().replace(/\s+/g, '');
+}
+const CURATED_BY_KEY = {};
+Object.values(DOSSIER_MODELS).forEach(d => {
+  CURATED_BY_KEY[curatedKey(d.make, d.model, d.year)] = d;
+});
 
-export async function loadDossierTab(modelKey = null) {
-  if (modelKey) currentSelectedModelKey = modelKey;
-  const data = DOSSIER_MODELS[currentSelectedModelKey] || DOSSIER_MODELS['aqua_2014'];
-  
+let currentSelectedData = null;
+let modelListCache = null;
+let searchBound = false;
+
+// Pulls every (make, base_model, year) cohort with enough live ads to benchmark,
+// sorted by inventory volume (already handled server-side) — this is the full
+// searchable universe, not a fixed shortlist of 5 models.
+async function ensureModelListLoaded() {
+  if (modelListCache) return modelListCache;
+  try {
+    const res = await fetch('/api/market-trends?limit=500&offset=0');
+    const json = await res.json();
+    modelListCache = (json.items || []).filter(r => r.total_ads >= 2 && r.avg_price > 0);
+  } catch (e) {
+    modelListCache = [];
+  }
+  return modelListCache;
+}
+
+// Builds a full dossier data object from a live market-trends row. Numbers (market
+// average, floor price, buy/resale targets, profit) are always computed from real
+// listings; curated gotchas/fuel/reliability notes are attached on top when available.
+function buildLiveDossierData(row) {
+  const curated = CURATED_BY_KEY[curatedKey(row.make, row.model, row.year)];
+  const marketAvg = row.avg_price;
+  const nationalFloor = row.min_price;
+
+  const buyLow = nationalFloor;
+  const buyHigh = Math.round(nationalFloor * 1.02);
+  const resaleLow = Math.round(marketAvg * 0.96);
+  const resaleHigh = Math.round(marketAvg * 0.99);
+  const refurb = 80000;
+  const profitLow = Math.max(0, resaleLow - buyHigh - refurb);
+  const profitHigh = Math.max(0, resaleHigh - buyLow - refurb);
+  const roiPct = buyHigh > 0 ? ((profitLow / buyHigh) * 100).toFixed(1) : '0.0';
+  const badgeToTier = { 'liquidity-tier-1': 1, 'liquidity-tier-2': 2, 'liquidity-tier-3': 3, 'liquidity-tier-4': 4 };
+
+  return {
+    name: `${row.make} ${row.model} (${row.year})`,
+    make: row.make,
+    model: row.model,
+    year: row.year,
+    market_avg: marketAvg,
+    national_floor: nationalFloor,
+    sample_size: row.total_ads,
+    fuel_city: curated ? curated.fuel_city : 'Not yet catalogued',
+    fuel_highway: curated ? curated.fuel_highway : '',
+    fuel_rating: curated ? curated.fuel_rating : 3,
+    fuel_label: curated ? curated.fuel_label : 'Uncatalogued',
+    reliability_rating: curated ? curated.reliability_rating : 'No curated notes for this exact model/year yet — use the general checklist below.',
+    turnover_tier: badgeToTier[row.liquidity_badge_class] || 4,
+    turnover_velocity: `${row.liquidity_tier} (${row.liquidity_tag})`,
+    gotchas: curated ? curated.gotchas : [
+      'No model-specific mechanic notes catalogued yet for this exact year — run a full general pre-purchase inspection.',
+      'Check full service history, and accident/flood damage history.',
+      'Inspect rust in wheel wells, sills and boot floor, test suspension play, and check AC + electrical function.'
+    ],
+    target_buy_range: `${formatLKR(buyLow)} – ${formatLKR(buyHigh)}`,
+    target_resale_range: `${formatLKR(resaleLow)} – ${formatLKR(resaleHigh)}`,
+    est_net_profit: `${formatLKR(profitLow)} – ${formatLKR(profitHigh)} (${roiPct}% ROI)`
+  };
+}
+
+function initDossierSearch() {
+  if (searchBound) return;
+  searchBound = true;
+  const input = document.getElementById('dossierSearchInput');
+  const results = document.getElementById('dossierSearchResults');
+  if (!input || !results) return;
+
+  const renderResults = async (q) => {
+    const list = await ensureModelListLoaded();
+    const query = q.trim().toLowerCase();
+    const matches = query
+      ? list.filter(r => `${r.make} ${r.model} ${r.year}`.toLowerCase().includes(query)).slice(0, 15)
+      : list.slice(0, 15);
+
+    results.innerHTML = matches.length === 0
+      ? `<div class="dossier-search-empty">No indexed models match "${escapeHtml(q)}".</div>`
+      : matches.map(r => `
+        <div class="dossier-search-item" data-make="${escapeHtml(r.make)}" data-model="${escapeHtml(r.model)}" data-year="${r.year}">
+          <span class="dossier-search-item-name">${escapeHtml(r.make)} ${escapeHtml(r.model)}<span class="dossier-search-item-year">${r.year}</span></span>
+          <span class="dossier-search-item-meta">${formatLKR(r.avg_price)} · ${r.total_ads} ads</span>
+        </div>
+      `).join('');
+    results.style.display = 'block';
+  };
+
+  input.addEventListener('focus', () => renderResults(input.value));
+  input.addEventListener('input', () => renderResults(input.value));
+  input.addEventListener('blur', () => {
+    setTimeout(() => { results.style.display = 'none'; }, 150);
+  });
+
+  results.addEventListener('mousedown', (e) => {
+    const item = e.target.closest('.dossier-search-item');
+    if (!item) return;
+    e.preventDefault();
+    const make = item.dataset.make, model = item.dataset.model, year = parseInt(item.dataset.year, 10);
+    const row = (modelListCache || []).find(r => r.make === make && r.model === model && r.year === year);
+    if (!row) return;
+    input.value = `${row.make} ${row.model} ${row.year}`;
+    results.style.display = 'none';
+    loadDossierTab(buildLiveDossierData(row));
+  });
+}
+
+export async function loadDossierTab(selection = null) {
+  initDossierSearch();
+  if (selection) currentSelectedData = selection;
+  if (!currentSelectedData) {
+    currentSelectedData = DOSSIER_MODELS['aqua_2014'];
+    const input = document.getElementById('dossierSearchInput');
+    if (input) input.value = currentSelectedData.name;
+  }
+  const data = currentSelectedData;
+
   // Render Model Intelligence Specs Cards
   renderDossierSpecs(data);
-  
+
   // Fetch live matching ads from database/API
   await fetchAndRenderDossierListings(data);
 }
@@ -316,8 +440,11 @@ async function fetchAndRenderDossierListings(data) {
   }
 }
 
+// Kept for backward compatibility with any external caller still passing a curated
+// DOSSIER_MODELS key (e.g. 'aqua_2014') instead of a live search selection.
 export function selectDossierModel(modelKey) {
-  loadDossierTab(modelKey);
+  const data = DOSSIER_MODELS[modelKey];
+  if (data) loadDossierTab(data);
 }
 
 export function refreshDossierData() {
