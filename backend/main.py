@@ -285,8 +285,8 @@ def get_dashboard_stats():
     }
 
 @app.get("/api/market-trends")
-def market_trends(limit: int = 20, offset: int = 0):
-    return get_market_trends_summary(limit=limit, offset=offset)
+def market_trends(limit: int = 20, offset: int = 0, query: Optional[str] = None):
+    return get_market_trends_summary(limit=limit, offset=offset, query=query or "")
 
 @app.get("/api/pipeline")
 def list_pipeline_leads(stage: Optional[str] = None, limit: int = 100, offset: int = 0):

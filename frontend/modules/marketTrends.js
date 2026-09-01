@@ -12,12 +12,11 @@ export async function loadMarketTrends(offset = 0) {
   const tbody = document.getElementById('marketTableBody');
   if (tbody) {
     tbody.innerHTML = `<tr><td colspan="7" class="font-mono" style="text-align:center; padding: 2rem; color: var(--ink-secondary);">Analyzing market database benchmarks...</td></tr>`;
-    // Delegated once: reads make/model from data-* attributes as plain strings,
-    // rather than interpolating scraped text into an inline onclick JS string.
+    // Delegated once: reads make/model/year from data-* attributes as plain strings
     if (!delegatedClickBound) {
       tbody.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-make]');
-        if (btn) searchSpecificModel(btn.dataset.make, btn.dataset.model);
+        if (btn) searchSpecificModel(btn.dataset.make, btn.dataset.model, btn.dataset.year);
       });
       delegatedClickBound = true;
     }
@@ -33,7 +32,7 @@ export async function loadMarketTrends(offset = 0) {
     const totalPages = Math.ceil(total / marketLimit) || 1;
     
     const ind = document.getElementById('marketPageIndicator');
-    if (ind) ind.innerText = `Page ${currentPage} of ${totalPages} (${total} models)`;
+    if (ind) ind.innerText = `Page ${currentPage} of ${totalPages} (${total.toLocaleString()} cohorts)`;
     const prevBtn = document.getElementById('prevMarketBtn');
     if (prevBtn) prevBtn.disabled = offset <= 0;
     const nextBtn = document.getElementById('nextMarketBtn');
@@ -49,7 +48,7 @@ export async function loadMarketTrends(offset = 0) {
     tbody.innerHTML = trends.map(t => `
       <tr>
         <td><strong>${escapeHtml(t.make)} ${escapeHtml(t.model)}</strong></td>
-        <td class="font-mono">${t.avg_year || 'N/A'}</td>
+        <td class="font-mono" style="font-weight: 600; color: var(--ink-navy);">${t.year || t.avg_year || 'N/A'}</td>
         <td class="font-mono" style="font-weight: 700; color: var(--signal);">${formatLKR(t.avg_price)}</td>
         <td class="font-mono" style="color: var(--success);">${formatLKR(t.min_price)}</td>
         <td>
@@ -58,7 +57,7 @@ export async function loadMarketTrends(offset = 0) {
         </td>
         <td class="font-mono">${t.total_ads} ads</td>
         <td>
-          <button class="btn-secondary" style="padding:0.3rem 0.65rem; font-size:0.75rem;" data-make="${escapeHtml(t.make)}" data-model="${escapeHtml(t.model)}">
+          <button class="btn-secondary" style="padding:0.3rem 0.65rem; font-size:0.75rem;" data-make="${escapeHtml(t.make)}" data-model="${escapeHtml(t.model)}" data-year="${t.year || ''}">
             View Inventory
           </button>
         </td>
@@ -74,9 +73,9 @@ export function changeMarketPage(delta) {
   loadMarketTrends(newOffset);
 }
 
-export function searchSpecificModel(make, model) {
+export function searchSpecificModel(make, model, year = '') {
   switchTab('deals');
   document.getElementById('filterMake').value = make;
-  document.getElementById('filterQuery').value = model;
+  document.getElementById('filterQuery').value = `${model} ${year}`.trim();
   loadCars(0);
 }

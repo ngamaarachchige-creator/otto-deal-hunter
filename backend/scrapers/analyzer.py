@@ -343,54 +343,88 @@ def enrich_car_with_valuation(car: Dict[str, Any], benchmarks: Dict[str, Any]) -
 
     return car
 
-def get_market_trends_summary(limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-    """Returns paginated market benchmarks in Sri Lanka with average market prices, active listings and liquidity score"""
+def get_market_trends_summary(limit: int = 20, offset: int = 0, query: str = "") -> Dict[str, Any]:
+    """
+    Returns robust year-specific market benchmarks in Sri Lanka grouped by (Make, Base Model, Year).
+    Applies outlier trimming so averages reflect true street market prices rather than inflated dream asks.
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Total distinct models
     cursor.execute("""
-    SELECT COUNT(*) FROM (
-        SELECT make, model 
-        FROM cars 
-        WHERE price >= 400000 AND make != 'Other' AND make IS NOT NULL AND is_negotiable = 0
-        GROUP BY make, model
-    )
-    """)
-    row = cursor.fetchone()
-    total = row[0] if row else 0
-    
-    cursor.execute("""
-    SELECT make, model, 
-           COUNT(*) as total_ads,
-           ROUND(AVG(price), 0) as avg_price,
-           MIN(price) as min_price,
-           MAX(price) as max_price,
-           ROUND(AVG(year), 0) as avg_year
+    SELECT make, model, title, year, fuel_type, price
     FROM cars
-    WHERE price >= 400000 AND make != 'Other' AND make IS NOT NULL AND is_negotiable = 0
-    GROUP BY make, model
-    ORDER BY total_ads DESC
-    LIMIT :limit OFFSET :offset
-    """, {"limit": limit, "offset": offset})
-    
+    WHERE price >= 400000 AND price <= 200000000 
+      AND make != 'Other' AND make IS NOT NULL
+      AND year IS NOT NULL AND year >= 1990 AND year <= 2026
+      AND is_negotiable = 0
+    """)
     rows = cursor.fetchall()
-    trends = []
-    for r in rows:
-        d = dict(r)
-        liq = compute_liquidity_tier(d.get('make', ''), d.get('model', ''))
-        d['liquidity_tier'] = liq['tier']
-        d['turnaround_days'] = liq['turnaround_days']
-        d['velocity_score'] = liq['velocity_score']
-        d['liquidity_tag'] = liq['tag']
-        d['liquidity_badge_class'] = liq['badge_class']
-        trends.append(d)
-        
     conn.close()
+    
+    # Group by (make, base_model, year)
+    groups = {}
+    for r in rows:
+        make = (r["make"] or "Other").strip().title()
+        model_str = r["model"] or ""
+        title_str = r["title"] or ""
+        base_model = extract_base_model(make, model_str, title_str)
+        year = int(r["year"])
+        price = float(r["price"])
+        
+        key = (make, base_model, year)
+        if key not in groups:
+            groups[key] = {
+                "make": make,
+                "model": base_model,
+                "year": year,
+                "prices": []
+            }
+        groups[key]["prices"].append(price)
+        
+    trends = []
+    for (make, base_model, year), data in groups.items():
+        prices = data["prices"]
+        if not prices:
+            continue
+            
+        if query:
+            q_lower = query.lower()
+            if q_lower not in make.lower() and q_lower not in base_model.lower() and q_lower != str(year):
+                continue
+
+        avg_p = compute_robust_mean(prices)
+        min_p = min(prices)
+        max_p = max(prices)
+        total_ads = len(prices)
+        
+        liq = compute_liquidity_tier(make, base_model, year=year)
+        
+        trends.append({
+            "make": make,
+            "model": base_model,
+            "year": year,
+            "avg_year": year,
+            "total_ads": total_ads,
+            "avg_price": round(avg_p, 0),
+            "min_price": min_p,
+            "max_price": max_p,
+            "liquidity_tier": liq["tier"],
+            "turnaround_days": liq["turnaround_days"],
+            "velocity_score": liq["velocity_score"],
+            "liquidity_tag": liq["tag"],
+            "liquidity_badge_class": liq["badge_class"]
+        })
+        
+    # Sort by active inventory stock descending
+    trends.sort(key=lambda x: (x["total_ads"], x["year"]), reverse=True)
+    
+    total = len(trends)
+    paged = trends[offset : offset + limit]
     
     return {
         "total": total,
         "limit": limit,
         "offset": offset,
-        "items": trends
+        "items": paged
     }
