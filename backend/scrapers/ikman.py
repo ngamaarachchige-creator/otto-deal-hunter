@@ -132,6 +132,13 @@ class IkmanScraper:
         except Exception as e:
             print(f"[Ikman] Error scraping page {page_num}: {e}")
 
+        # The card-level transmission/fuel_type/body_type above are just keyword
+        # guesses off the search-card text, which almost never mentions them —
+        # overwrite with the real values off each ad's own detail page.
+        if results:
+            from .detail_fetch import enrich_with_detail_specs, fetch_ikman_specs
+            enrich_with_detail_specs(results, fetch_ikman_specs)
+
         return results
 
     def scrape_multi_pages(self, max_pages: int = 2, progress_callback=None, **filter_kwargs) -> List[Dict[str, Any]]:

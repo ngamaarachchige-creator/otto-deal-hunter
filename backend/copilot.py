@@ -245,7 +245,7 @@ def execute_live_scrape(query: str = "") -> Dict[str, Any]:
     def riya_prog(msg, cur, total):
         COPILOT_SCRAPE_LOGS.append(msg)
         
-    riya_items = riya.scrape_multi_pages(max_pages=1, progress_callback=riya_prog, query=query)
+    riya_items = riya.scrape_multi_pages(max_pages=3, progress_callback=riya_prog, query=query)
     riya_count = len(riya_items)
     if riya_items:
         upsert_cars_batch(riya_items)
@@ -256,7 +256,7 @@ def execute_live_scrape(query: str = "") -> Dict[str, Any]:
     def ikman_prog(msg, cur, total):
         COPILOT_SCRAPE_LOGS.append(msg)
         
-    ikman_items = ikman.scrape_multi_pages(max_pages=1, progress_callback=ikman_prog, query=query)
+    ikman_items = ikman.scrape_multi_pages(max_pages=3, progress_callback=ikman_prog, query=query)
     ikman_count = len(ikman_items)
     if ikman_items:
         upsert_cars_batch(ikman_items)

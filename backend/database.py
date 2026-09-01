@@ -248,6 +248,9 @@ def upsert_cars_batch(cars_list: List[Dict[str, Any]]) -> int:
             district = EXCLUDED.district,
             mileage_km = EXCLUDED.mileage_km,
             mileage_display = EXCLUDED.mileage_display,
+            transmission = CASE WHEN %(specs_verified)s THEN EXCLUDED.transmission ELSE cars.transmission END,
+            fuel_type = CASE WHEN %(specs_verified)s THEN EXCLUDED.fuel_type ELSE cars.fuel_type END,
+            body_type = CASE WHEN %(specs_verified)s THEN EXCLUDED.body_type ELSE cars.body_type END,
             image_url = EXCLUDED.image_url,
             date_posted = EXCLUDED.date_posted,
             status = 'active',
@@ -275,6 +278,7 @@ def upsert_cars_batch(cars_list: List[Dict[str, Any]]) -> int:
                 'transmission': car_data.get('transmission', ''),
                 'fuel_type': car_data.get('fuel_type', ''),
                 'body_type': car_data.get('body_type', ''),
+                'specs_verified': bool(car_data.get('_specs_verified')),
                 'image_url': car_data.get('image_url', ''),
                 'url': car_data.get('url', ''),
                 'date_posted': car_data.get('date_posted', ''),
@@ -309,6 +313,7 @@ def upsert_cars_batch(cars_list: List[Dict[str, Any]]) -> int:
                 'transmission': car_data.get('transmission', ''),
                 'fuel_type': car_data.get('fuel_type', ''),
                 'body_type': car_data.get('body_type', ''),
+                'specs_verified': 1 if car_data.get('_specs_verified') else 0,
                 'image_url': car_data.get('image_url', ''),
                 'url': car_data.get('url', ''),
                 'date_posted': car_data.get('date_posted', ''),
@@ -329,9 +334,9 @@ def upsert_cars_batch(cars_list: List[Dict[str, Any]]) -> int:
             :image_url, :url, :date_posted, 'active', :created_at, :updated_at, :created_at, :updated_at
         )
         ON CONFLICT(external_id) DO UPDATE SET
-            price_drop_amount = CASE 
+            price_drop_amount = CASE
                 WHEN cars.price > excluded.price AND excluded.price > 0 THEN (cars.price - excluded.price)
-                ELSE cars.price_drop_amount 
+                ELSE cars.price_drop_amount
             END,
             price = excluded.price,
             price_display = excluded.price_display,
@@ -340,6 +345,9 @@ def upsert_cars_batch(cars_list: List[Dict[str, Any]]) -> int:
             district = excluded.district,
             mileage_km = excluded.mileage_km,
             mileage_display = excluded.mileage_display,
+            transmission = CASE WHEN :specs_verified THEN excluded.transmission ELSE cars.transmission END,
+            fuel_type = CASE WHEN :specs_verified THEN excluded.fuel_type ELSE cars.fuel_type END,
+            body_type = CASE WHEN :specs_verified THEN excluded.body_type ELSE cars.body_type END,
             image_url = excluded.image_url,
             date_posted = excluded.date_posted,
             status = 'active',
