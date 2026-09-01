@@ -36,6 +36,7 @@ export function parseNaturalLanguageQuery(text) {
     min_price: null,
     max_price: null,
     district: '',
+    fuel_type: '',
     deal_filter: '',
     cleaned_query: ''
   };
@@ -138,6 +139,21 @@ export function parseNaturalLanguageQuery(text) {
     }
   }
 
+  // 5.5 Parse Fuel Type (e.g. petrol, diesel, hybrid, electric / ev)
+  if (/\b(hybrid)\b/i.test(lower)) {
+    parsed.fuel_type = 'Hybrid';
+    lower = lower.replace(/\b(hybrid)\b/gi, ' ');
+  } else if (/\b(diesel)\b/i.test(lower)) {
+    parsed.fuel_type = 'Diesel';
+    lower = lower.replace(/\b(diesel)\b/gi, ' ');
+  } else if (/\b(electric|ev)\b/i.test(lower)) {
+    parsed.fuel_type = 'Electric';
+    lower = lower.replace(/\b(electric|ev)\b/gi, ' ');
+  } else if (/\b(petrol|gasoline)\b/i.test(lower)) {
+    parsed.fuel_type = 'Petrol';
+    lower = lower.replace(/\b(petrol|gasoline)\b/gi, ' ');
+  }
+
   // 6. Parse Deal Type Keywords
   if (lower.includes('hot') || lower.includes('underpriced') || lower.includes('flip') || lower.includes('bargain')) {
     parsed.deal_filter = 'hot';
@@ -183,6 +199,9 @@ export function renderParsedChips(parsed, onRemoveCallback) {
   }
   if (parsed.district) {
     chips.push({ key: 'district', label: `District: ${parsed.district}` });
+  }
+  if (parsed.fuel_type) {
+    chips.push({ key: 'fuel_type', label: `Fuel: ${parsed.fuel_type}` });
   }
   if (parsed.deal_filter) {
     chips.push({ key: 'deal_filter', label: `Deals: ${parsed.deal_filter.toUpperCase()}` });

@@ -392,6 +392,9 @@ def get_cars(filters: Dict[str, Any] = None, sort_by: str = "date_desc", limit: 
         if filters.get("district"):
             query += f" AND (LOWER(c.district) LIKE LOWER(%(district)s) OR LOWER(c.location) LIKE LOWER(%(district)s))" if IS_POSTGRES else " AND (LOWER(c.district) LIKE LOWER(:district) OR LOWER(c.location) LIKE LOWER(:district))"
             params["district"] = f"%{filters['district']}%"
+        if filters.get("fuel_type"):
+            query += f" AND LOWER(c.fuel_type) = LOWER(%(fuel_type)s)" if IS_POSTGRES else " AND LOWER(c.fuel_type) = LOWER(:fuel_type)"
+            params["fuel_type"] = filters["fuel_type"]
         if filters.get("min_price"):
             query += f" AND (c.price >= %(min_price)s AND c.price > 0)" if IS_POSTGRES else " AND (c.price >= :min_price AND c.price > 0)"
             params["min_price"] = float(filters["min_price"])
@@ -473,6 +476,9 @@ def get_car_count(filters: Dict[str, Any] = None) -> int:
         if filters.get("district"):
             query += f" AND (LOWER(c.district) LIKE LOWER(%(district)s) OR LOWER(c.location) LIKE LOWER(%(district)s))" if IS_POSTGRES else " AND (LOWER(c.district) LIKE LOWER(:district) OR LOWER(c.location) LIKE LOWER(:district))"
             params["district"] = f"%{filters['district']}%"
+        if filters.get("fuel_type"):
+            query += f" AND LOWER(c.fuel_type) = LOWER(%(fuel_type)s)" if IS_POSTGRES else " AND LOWER(c.fuel_type) = LOWER(:fuel_type)"
+            params["fuel_type"] = filters["fuel_type"]
         if filters.get("min_price"):
             query += f" AND (c.price >= %(min_price)s AND c.price > 0)" if IS_POSTGRES else " AND (c.price >= :min_price AND c.price > 0)"
             params["min_price"] = float(filters["min_price"])

@@ -261,6 +261,7 @@ export function getFilterParams(offset = 0) {
   const query = (document.getElementById('filterQuery')?.value || '').trim();
   const make = document.getElementById('filterMake')?.value || currentNLU.make;
   const district = document.getElementById('filterDistrict')?.value || currentNLU.district;
+  const fuelType = document.getElementById('filterFuelType')?.value || currentNLU.fuel_type;
   const minPriceRaw = parseFormattedNumber(document.getElementById('filterMinPrice')?.value) || currentNLU.min_price;
   const maxPriceRaw = parseFormattedNumber(document.getElementById('filterMaxPrice')?.value) || currentNLU.max_price;
   const source = document.getElementById('filterSource')?.value;
@@ -284,6 +285,7 @@ export function getFilterParams(offset = 0) {
 
   if (make) params.append('make', make);
   if (district) params.append('district', district);
+  if (fuelType) params.append('fuel_type', fuelType);
   if (minPriceRaw > 0) params.append('min_price', minPriceRaw);
   if (maxPriceRaw > 0) params.append('max_price', maxPriceRaw);
   if (source) params.append('source', source);
@@ -428,6 +430,7 @@ function renderCarCard(car) {
         <div class="car-meta-line">
           ${car.year ? `<span>${car.year}</span> • ` : ''}
           ${car.mileage_km ? `<span>${car.mileage_km.toLocaleString()} km</span> • ` : ''}
+          ${car.fuel_type ? `<span class="meta-fuel-pill">${escapeHtml(car.fuel_type)}</span> • ` : ''}
           <span>${escapeHtml(car.location || car.district || 'Sri Lanka')}</span>
         </div>
         ${liquidityBadge ? `<div style="margin-top: -0.25rem;">${liquidityBadge}</div>` : ''}
@@ -523,6 +526,8 @@ export function resetFilters() {
   document.getElementById('filterQuery').value = '';
   document.getElementById('filterMake').value = '';
   document.getElementById('filterDistrict').value = '';
+  const fuelEl = document.getElementById('filterFuelType');
+  if (fuelEl) fuelEl.value = '';
   document.getElementById('filterMinPrice').value = '';
   document.getElementById('filterMaxPrice').value = '';
   document.getElementById('filterSource').value = '';

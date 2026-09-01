@@ -147,6 +147,14 @@
             <option value="Ratnapura">Ratnapura</option>
           </select>
 
+          <select id="filterFuelType" class="custom-select" onchange="loadCars(0)">
+            <option value="">All Fuel Types</option>
+            <option value="Petrol">Petrol</option>
+            <option value="Diesel">Diesel</option>
+            <option value="Hybrid">Hybrid</option>
+            <option value="Electric">Electric</option>
+          </select>
+
           <input type="text" inputmode="numeric" id="filterMinPrice" class="custom-input font-mono" placeholder="Min Price (Rs.)" oninput="window.formatLiveNumberInput(this)" onchange="loadCars(0)">
           <input type="text" inputmode="numeric" id="filterMaxPrice" class="custom-input font-mono" placeholder="Max Price (Rs.)" oninput="window.formatLiveNumberInput(this)" onchange="loadCars(0)">
 

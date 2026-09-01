@@ -98,6 +98,11 @@ TOOLS_SCHEMA = [
                         "type": "integer",
                         "description": "Optional maximum price in LKR (e.g. 50000000 for 50M)"
                     },
+                    "fuel_type": {
+                        "type": "string",
+                        "enum": ["Petrol", "Diesel", "Hybrid", "Electric"],
+                        "description": "Optional fuel type: Petrol, Diesel, Hybrid, or Electric"
+                    },
                     "sort_by": {
                         "type": "string",
                         "enum": ["discount_desc", "price_asc", "price_desc", "year_desc"],
@@ -154,6 +159,7 @@ def log_copilot_turn(user_msg: str, tool_calls: list, thought_steps: list, respo
 
 def execute_search_deals(
     query: str = "",
+    fuel_type: Optional[str] = None,
     year: Optional[int] = None,
     min_price: Optional[int] = None,
     max_price: Optional[int] = None,
@@ -190,6 +196,10 @@ def execute_search_deals(
     if max_price:
         sql += " AND price <= :max_price"
         params["max_price"] = max_price
+        
+    if fuel_type:
+        sql += " AND LOWER(fuel_type) = LOWER(:fuel_type)"
+        params["fuel_type"] = fuel_type
         
     sql += " ORDER BY updated_at DESC LIMIT 120"
     cursor.execute(sql, params)
@@ -292,7 +302,7 @@ def run_copilot_agent(user_message: str, history: Optional[List[Dict[str, str]]]
     }
 
     try:
-        resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=payload, timeout=60)
+        resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=payload, timeout=35)
         resp.raise_for_status()
         data = resp.json()
     except Exception as e:
@@ -379,7 +389,7 @@ def run_copilot_agent(user_message: str, history: Optional[List[Dict[str, str]]]
             "think": False
         }
         try:
-            synth_resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=second_payload, timeout=60).json()
+            synth_resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=second_payload, timeout=35).json()
             final_text = synth_resp.get("message", {}).get("content", "").strip()
         except Exception:
             final_text = f"Found {len(deals)} top matching deals in the market:"
@@ -437,7 +447,7 @@ def run_copilot_agent(user_message: str, history: Optional[List[Dict[str, str]]]
             "think": False
         }
         try:
-            synth_resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=second_payload, timeout=60).json()
+            synth_resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=second_payload, timeout=35).json()
             final_text = synth_resp.get("message", {}).get("content", "").strip()
         except Exception:
             final_text = f"Live scrape completed! Ingested {scrape_result['new_listings_count']} listings. Here are the top results:"
