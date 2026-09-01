@@ -64,6 +64,12 @@ def compute_robust_mean(prices: List[float]) -> float:
     trimmed = prices[low_idx:high_idx]
     return sum(trimmed) / len(trimmed)
 
+def _ad_word(n: int) -> str:
+    """"1 ad" vs "2 ads" — confidence labels were showing "1 ads" for every
+    single-comparable listing, which is extremely common (LOW confidence is
+    exactly the 1-2 sample case)."""
+    return "ad" if n == 1 else "ads"
+
 def compute_liquidity_tier(make: str, model: str, body_type: str = "", year: int = None) -> Dict[str, Any]:
     """
     Computes real-world automotive dealer liquidity tier and turnaround velocity in Sri Lanka.
@@ -247,7 +253,7 @@ def enrich_car_with_valuation(car: Dict[str, Any], benchmarks: Dict[str, Any]) -
         avg_price = b["avg_price"]
         sample_size = b["sample_size"]
         confidence_level = "HIGH" if sample_size >= 8 else "MEDIUM"
-        confidence_label = f"{'High' if sample_size >= 8 else 'Medium'} Confidence ({sample_size} {fuel.title()} ads)"
+        confidence_label = f"{'High' if sample_size >= 8 else 'Medium'} Confidence ({sample_size} {fuel.title()} {_ad_word(sample_size)})"
         
     # Hierarchy 2: Exact Base Model + Exact Year
     elif year_key in detailed_year_dict:
@@ -256,13 +262,13 @@ def enrich_car_with_valuation(car: Dict[str, Any], benchmarks: Dict[str, Any]) -
         sample_size = b["sample_size"]
         if sample_size >= 8:
             confidence_level = "HIGH"
-            confidence_label = f"High Confidence ({sample_size} ads)"
+            confidence_label = f"High Confidence ({sample_size} {_ad_word(sample_size)})"
         elif sample_size >= 3:
             confidence_level = "MEDIUM"
-            confidence_label = f"Medium Confidence ({sample_size} ads)"
+            confidence_label = f"Medium Confidence ({sample_size} {_ad_word(sample_size)})"
         else:
             confidence_level = "LOW"
-            confidence_label = f"Low Confidence ({sample_size} ads)"
+            confidence_label = f"Low Confidence ({sample_size} {_ad_word(sample_size)})"
 
     # Hierarchy 3: Nearest Year Cohort with Depreciation Adjustment (prevents mixing 2003 with 2025!)
     elif curve_key in model_curves and year:
@@ -278,7 +284,7 @@ def enrich_car_with_valuation(car: Dict[str, Any], benchmarks: Dict[str, Any]) -
             avg_price = round(base_val * deprec_factor, 0)
             sample_size = curve["total_samples"]
             confidence_level = "LOW"
-            confidence_label = f"Estimated vs {closest_yr} cohort ({sample_size} comp ads)"
+            confidence_label = f"Estimated vs {closest_yr} cohort ({sample_size} comp {_ad_word(sample_size)})"
 
     car["deal_confidence"] = confidence_level
     car["deal_confidence_label"] = confidence_label

@@ -115,7 +115,6 @@ export async function loadStats() {
     const data = await res.json();
     document.getElementById('statTotalCars').innerText = data.total_cars.toLocaleString();
     document.getElementById('statHotDeals').innerText = data.hot_deals_count.toLocaleString();
-    document.getElementById('statPotentialProfit').innerText = formatLKR(data.total_potential_profit);
     document.getElementById('statActiveLeads').innerText = data.active_leads.toLocaleString();
 
     if (data.active_leads > 0) {
@@ -444,7 +443,7 @@ function renderCarCard(car) {
           ${car.market_avg_price ? `
             <div class="market-avg-info">
               <div>Market Avg: <strong>${formatLKR(car.market_avg_price)}</strong></div>
-              ${car.discount_percentage ? `<div style="color: var(--success); font-weight: 700;">${car.discount_percentage}% below market</div>` : ''}
+              ${car.discount_percentage ? `<div style="color: ${car.discount_percentage >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight: 700;">${escapeHtml(car.deal_tag || (car.discount_percentage >= 0 ? `${car.discount_percentage}% below market` : `${Math.abs(car.discount_percentage)}% above market`))}</div>` : ''}
             </div>
           ` : ''}
         </div>

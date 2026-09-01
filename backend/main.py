@@ -412,7 +412,17 @@ def ai_inspect_car(car_id: int):
     try:
         analysis = inspect_car(car)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"AI assistant unreachable: {e}")
+        # The raw exception (connection-refused stack traces, "No route to
+        # host", etc.) is a Python-internals string that isn't meaningful to
+        # someone using the app — log it server-side and give the user a
+        # plain, actionable message instead.
+        print(f"[AI Inspect] {type(e).__name__}: {e}")
+        error_str = str(e).lower()
+        if "no route to host" in error_str or "connection" in error_str or "timed out" in error_str or "timeout" in error_str:
+            detail = "Couldn't reach OTTO's AI assistant — the Ollama server isn't reachable right now. Check that it's running and on the same network."
+        else:
+            detail = "OTTO's AI assistant hit an error and couldn't complete the inspection. Try again in a moment."
+        raise HTTPException(status_code=502, detail=detail)
 
     return {"car_id": car_id, "analysis": analysis}
 

@@ -152,7 +152,7 @@ def log_copilot_turn(user_msg: str, tool_calls: list, thought_steps: list, respo
             "thought_steps": thought_steps,
             "response_text": response_text
         }
-        log_dir = "/Users/nethukagamaarachcige/Documents/otto-deal-hunter/data"
+        log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
         os.makedirs(log_dir, exist_ok=True)
         with open(os.path.join(log_dir, "copilot_chats.jsonl"), "a", encoding="utf-8") as f:
             f.write(json.dumps(log_entry) + "\n")
@@ -334,7 +334,14 @@ def run_copilot_agent(user_message: str, history: Optional[List[Dict[str, str]]]
         resp.raise_for_status()
         data = resp.json()
     except Exception as e:
-        err_msg = f"Couldn't reach OTTO agent: {str(e)}"
+        # Log the raw exception (connection-refused stacks, "No route to
+        # host", etc.) server-side — it's not meaningful chat content.
+        print(f"[Copilot] {type(e).__name__}: {e}")
+        error_str = str(e).lower()
+        if "no route to host" in error_str or "connection" in error_str or "timed out" in error_str or "timeout" in error_str:
+            err_msg = "Can't reach the AI assistant right now — Ollama isn't responding on the network. Check that it's running."
+        else:
+            err_msg = "Hit an error talking to the AI assistant. Try again in a moment."
         log_copilot_turn(user_message, [], ["Error communicating with model"], err_msg)
         return {
             "thought_steps": ["Error communicating with local AI model"],
