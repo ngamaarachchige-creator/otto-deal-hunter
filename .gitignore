@@ -26,3 +26,5 @@ data/rate_limit_state.json
 cf-worker/node_modules/
 cf-worker/.wrangler/
 cf-worker/.dev.vars
+.vercel
+.env*
