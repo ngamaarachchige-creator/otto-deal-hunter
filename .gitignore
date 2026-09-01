@@ -16,3 +16,6 @@ venv/
 
 # Logs
 *.log
+
+# Ephemeral scraper rate-limit cooldown state (local, timestamp-only, no reason to version)
+data/rate_limit_state.json

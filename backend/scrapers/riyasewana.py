@@ -154,12 +154,20 @@ class RiyasewanaScraper:
 
     def scrape_page(self, page_num: int = 1, query: str = "", make: str = "", 
                      model: str = "", min_price: float = None, max_price: float = None) -> List[Dict[str, Any]]:
-        url = self.build_search_url(query=query, make=make, model=model, 
+        url = self.build_search_url(query=query, make=make, model=model,
                                      min_price=min_price, max_price=max_price, page=page_num)
-        
+
         results = []
+        from .rate_limit_state import is_cooling_down, record_rate_limit
+        if is_cooling_down("riyasewana.com"):
+            self.last_rate_limited = True
+            return results
         try:
             resp = self.fetcher.get(url)
+            if resp.status in (429, 403):
+                record_rate_limit("riyasewana.com")
+                self.last_rate_limited = True
+                return results
             if resp.status != 200:
                 print(f"[Riyasewana] Non-200 response: {resp.status} for {url}")
                 return results
@@ -260,9 +268,14 @@ class RiyasewanaScraper:
         # The card-level transmission/fuel_type/body_type above are just keyword
         # guesses off the search-card text, which almost never mentions them —
         # overwrite with the real values off each ad's own detail page.
+        # Tracked on self rather than returned, since scrape_page's return type
+        # (the item list) is relied on elsewhere — scrape_multi_pages checks this
+        # after each page so a rate limit actually stops the whole run instead of
+        # silently re-hitting a blocked endpoint on every remaining page.
+        self.last_rate_limited = False
         if results:
             from .detail_fetch import enrich_with_detail_specs, fetch_riyasewana_specs
-            enrich_with_detail_specs(results, fetch_riyasewana_specs)
+            self.last_rate_limited = enrich_with_detail_specs(results, fetch_riyasewana_specs)
 
         return results
 
@@ -275,5 +288,9 @@ class RiyasewanaScraper:
             if not items:
                 break
             all_items.extend(items)
+            if getattr(self, "last_rate_limited", False):
+                if progress_callback:
+                    progress_callback("Riyasewana is rate-limiting detail requests — stopping early to cool down.", p, max_pages)
+                break
             time.sleep(0.5)
         return all_items

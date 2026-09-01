@@ -12,12 +12,18 @@ import time
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable, Optional
+from urllib.parse import urlparse
 from scrapling import Fetcher
 
 from backend.database import get_db_connection, IS_POSTGRES
+from .rate_limit_state import is_cooling_down, record_rate_limit
 
 DEAD_STATUS_CODES = {404, 410}
-RATE_LIMITED_STATUS_CODES = {429}
+# 403 included alongside 429: Riyasewana escalated from a soft 429 to a hard 403
+# block under this session's sustained volume, so both need to trigger the same
+# cooldown — treating only 429 as "rate limited" left the harder block invisible
+# to this whole mechanism.
+RATE_LIMITED_STATUS_CODES = {429, 403}
 
 
 class RateLimited(Exception):
@@ -28,6 +34,8 @@ def _image_dead(image_url: str) -> Optional[bool]:
     """Returns True if the image is confirmed gone, False if confirmed present,
     or None if inconclusive (network hiccup, unexpected status) — caller should
     fall back to checking the ad page itself in that case."""
+    if is_cooling_down(urlparse(image_url).netloc):
+        return None
     try:
         # stream=True + immediate close: we only need the status line, not the
         # image bytes, so this stays cheap even though HEAD isn't supported by
@@ -37,6 +45,7 @@ def _image_dead(image_url: str) -> Optional[bool]:
         if resp.status_code in DEAD_STATUS_CODES:
             return True
         if resp.status_code in RATE_LIMITED_STATUS_CODES:
+            record_rate_limit(urlparse(image_url).netloc)
             raise RateLimited()
         if resp.status_code == 200:
             return False
@@ -60,6 +69,10 @@ def _is_dead(url: str, image_url: Optional[str], fetcher: Fetcher, retries: int 
             return False
         # None (inconclusive) falls through to the ad-page check below.
 
+    host = urlparse(url).netloc
+    if is_cooling_down(host):
+        return False
+
     for attempt in range(retries + 1):
         try:
             resp = fetcher.get(url, timeout=15)
@@ -71,6 +84,7 @@ def _is_dead(url: str, image_url: Optional[str], fetcher: Fetcher, retries: int 
         if resp.status in RATE_LIMITED_STATUS_CODES:
             # Getting rate-limited at all means we're going too fast for this site
             # right now — bail out of the whole batch instead of hammering it further.
+            record_rate_limit(host)
             raise RateLimited()
         return False
     return False

@@ -23,7 +23,10 @@ import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable, Dict, List, Optional
+from urllib.parse import urlparse
 import requests
+
+from .rate_limit_state import is_cooling_down, record_rate_limit
 
 _HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -65,11 +68,17 @@ def _extract_meta_description(html: str) -> Optional[str]:
 def fetch_riyasewana_specs(url: str, timeout: int = 12) -> Optional[Dict[str, str]]:
     """Parses the "Gear" / "Fuel Type" detail rows and seller description off a
     Riyasewana ad page."""
+    host = urlparse(url).netloc
+    if is_cooling_down(host):
+        return None
     try:
         resp = requests.get(url, timeout=timeout, headers=_HEADERS)
     except requests.RequestException:
         return None
-    if resp.status_code == 429:
+    if resp.status_code in (429, 403):
+        # 403 included: Riyasewana escalated from a soft 429 to a hard 403 block
+        # under sustained volume tonight — both need to trigger the same cooldown.
+        record_rate_limit(host)
         raise DetailRateLimited()
     if resp.status_code != 200:
         return None
@@ -96,11 +105,17 @@ def fetch_riyasewana_specs(url: str, timeout: int = 12) -> Optional[Dict[str, st
 def fetch_ikman_specs(url: str, timeout: int = 12) -> Optional[Dict[str, str]]:
     """Parses the embedded {"label":"...","value":"..."} spec entries and seller
     description off an Ikman ad page."""
+    host = urlparse(url).netloc
+    if is_cooling_down(host):
+        return None
     try:
         resp = requests.get(url, timeout=timeout, headers=_HEADERS)
     except requests.RequestException:
         return None
-    if resp.status_code == 429:
+    if resp.status_code in (429, 403):
+        # 403 included: Riyasewana escalated from a soft 429 to a hard 403 block
+        # under sustained volume tonight — both need to trigger the same cooldown.
+        record_rate_limit(host)
         raise DetailRateLimited()
     if resp.status_code != 200:
         return None
@@ -134,10 +149,23 @@ def enrich_with_detail_specs(
     remaining items on their card-text guesses) if the source site starts rate
     limiting, rather than hammering it further.
 
-    Returns True if rate limiting was hit.
+    Returns True if rate limiting was hit (including "already in an active
+    cooldown from an earlier hit", which skips this whole batch before making
+    any request at all).
     """
     if not items:
         return False
+
+    urls = [i["url"] for i in items if i.get("url")]
+    if not urls:
+        return False
+    host = urlparse(urls[0]).netloc
+    remaining = is_cooling_down(host)
+    if remaining:
+        print(f"[detail_fetch] {host} is in a rate-limit cooldown for another "
+              f"{remaining / 60:.0f} min — skipping detail enrichment for this batch "
+              f"of {len(items)} rather than hammering it further.")
+        return True
 
     def worker(item):
         time.sleep(delay)
