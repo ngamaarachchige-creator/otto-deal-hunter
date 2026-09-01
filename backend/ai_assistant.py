@@ -20,7 +20,8 @@ CRITICAL: NEVER use em dashes ("—") or en dashes ("-") in your response. Use c
 3. Colour arbitrage: identify the car's colour from the photo. White and black command a premium in the Sri Lankan market. Other colours (silver, grey, blue, red, etc.) typically trade 5-15% below white/black for the same spec. Flag it as a genuine colour arbitrage opportunity only when the price is low even accounting for the colour discount.
 4. Sri Lanka-specific inspection checklist: coastal rust points, gearbox/CVT health, suspension bushings, AC coil, common local failure points.
 5. If a photo is attached, actually look at it: comment on visible condition, paint/panel mismatches, tyre wear, interior condition.
-6. A one-line verdict: BUY / NEGOTIATE / PASS, with the single biggest reason why.
+6. If the seller's own description is included, read it for real signal: accessories/mods mentioned (raise or lower value depending), any faults or "as-is" language admitted, service/accident history claims. Weigh it against the photo and price rather than repeating it.
+7. A one-line verdict: BUY / NEGOTIATE / PASS, with the single biggest reason why.
 
 Format your response using Markdown bullet points (*). Keep the whole answer under 150 words. Be direct and practical. Do not repeat the input data back verbatim."""
 
@@ -47,6 +48,12 @@ def inspect_car(car: Dict[str, Any]) -> str:
         f"Location: {car.get('district') or car.get('location')}\n"
         f"Liquidity Tier: {car.get('liquidity_tier')}\n"
     )
+
+    description = (car.get("description") or "").strip()
+    if description:
+        # Cap what reaches the prompt — the DB keeps the full text, but the model
+        # only needs enough to catch condition/accessory/fault mentions.
+        details += f"Seller's Own Description:\n{description[:800]}\n"
 
     user_message: Dict[str, Any] = {"role": "user", "content": f"Assess this listing:\n\n{details}"}
 

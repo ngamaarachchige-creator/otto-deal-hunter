@@ -58,6 +58,7 @@ def init_db():
             transmission VARCHAR(50),
             fuel_type VARCHAR(50),
             body_type VARCHAR(50),
+            description TEXT,
             image_url TEXT,
             url TEXT NOT NULL,
             date_posted VARCHAR(100),
@@ -68,6 +69,8 @@ def init_db():
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
         );
+
+        ALTER TABLE cars ADD COLUMN IF NOT EXISTS description TEXT;
 
         CREATE TABLE IF NOT EXISTS pipeline (
             id SERIAL PRIMARY KEY,
@@ -120,6 +123,7 @@ def init_db():
             transmission TEXT,
             fuel_type TEXT,
             body_type TEXT,
+            description TEXT,
             image_url TEXT,
             url TEXT NOT NULL,
             date_posted TEXT,
@@ -146,6 +150,8 @@ def init_db():
             cursor.execute("ALTER TABLE cars ADD COLUMN last_seen_at DATETIME")
         if 'last_verified_at' not in columns:
             cursor.execute("ALTER TABLE cars ADD COLUMN last_verified_at DATETIME")
+        if 'description' not in columns:
+            cursor.execute("ALTER TABLE cars ADD COLUMN description TEXT")
 
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS pipeline (
@@ -228,18 +234,18 @@ def upsert_cars_batch(cars_list: List[Dict[str, Any]]) -> int:
         INSERT INTO cars (
             source, external_id, title, make, model, year,
             price, initial_price, price_drop_amount, price_display, is_negotiable, location, district,
-            mileage_km, mileage_display, transmission, fuel_type, body_type,
+            mileage_km, mileage_display, transmission, fuel_type, body_type, description,
             image_url, url, date_posted, status, first_seen_at, last_seen_at, created_at, updated_at
         ) VALUES (
             %(source)s, %(external_id)s, %(title)s, %(make)s, %(model)s, %(year)s,
             %(price)s, %(price)s, 0, %(price_display)s, %(is_negotiable)s, %(location)s, %(district)s,
-            %(mileage_km)s, %(mileage_display)s, %(transmission)s, %(fuel_type)s, %(body_type)s,
+            %(mileage_km)s, %(mileage_display)s, %(transmission)s, %(fuel_type)s, %(body_type)s, %(description)s,
             %(image_url)s, %(url)s, %(date_posted)s, 'active', %(created_at)s, %(updated_at)s, %(created_at)s, %(updated_at)s
         )
         ON CONFLICT(external_id) DO UPDATE SET
-            price_drop_amount = CASE 
+            price_drop_amount = CASE
                 WHEN cars.price > EXCLUDED.price AND EXCLUDED.price > 0 THEN (cars.price - EXCLUDED.price)
-                ELSE cars.price_drop_amount 
+                ELSE cars.price_drop_amount
             END,
             price = EXCLUDED.price,
             price_display = EXCLUDED.price_display,
@@ -251,6 +257,7 @@ def upsert_cars_batch(cars_list: List[Dict[str, Any]]) -> int:
             transmission = CASE WHEN %(specs_verified)s THEN EXCLUDED.transmission ELSE cars.transmission END,
             fuel_type = CASE WHEN %(specs_verified)s THEN EXCLUDED.fuel_type ELSE cars.fuel_type END,
             body_type = CASE WHEN %(specs_verified)s THEN EXCLUDED.body_type ELSE cars.body_type END,
+            description = CASE WHEN %(specs_verified)s THEN EXCLUDED.description ELSE cars.description END,
             image_url = EXCLUDED.image_url,
             date_posted = EXCLUDED.date_posted,
             status = 'active',
@@ -278,6 +285,7 @@ def upsert_cars_batch(cars_list: List[Dict[str, Any]]) -> int:
                 'transmission': car_data.get('transmission', ''),
                 'fuel_type': car_data.get('fuel_type', ''),
                 'body_type': car_data.get('body_type', ''),
+                'description': car_data.get('description', ''),
                 'specs_verified': bool(car_data.get('_specs_verified')),
                 'image_url': car_data.get('image_url', ''),
                 'url': car_data.get('url', ''),
@@ -313,6 +321,7 @@ def upsert_cars_batch(cars_list: List[Dict[str, Any]]) -> int:
                 'transmission': car_data.get('transmission', ''),
                 'fuel_type': car_data.get('fuel_type', ''),
                 'body_type': car_data.get('body_type', ''),
+                'description': car_data.get('description', ''),
                 'specs_verified': 1 if car_data.get('_specs_verified') else 0,
                 'image_url': car_data.get('image_url', ''),
                 'url': car_data.get('url', ''),
@@ -325,12 +334,12 @@ def upsert_cars_batch(cars_list: List[Dict[str, Any]]) -> int:
         INSERT INTO cars (
             source, external_id, title, make, model, year,
             price, initial_price, price_drop_amount, price_display, is_negotiable, location, district,
-            mileage_km, mileage_display, transmission, fuel_type, body_type,
+            mileage_km, mileage_display, transmission, fuel_type, body_type, description,
             image_url, url, date_posted, status, first_seen_at, last_seen_at, created_at, updated_at
         ) VALUES (
             :source, :external_id, :title, :make, :model, :year,
             :price, :price, 0, :price_display, :is_negotiable, :location, :district,
-            :mileage_km, :mileage_display, :transmission, :fuel_type, :body_type,
+            :mileage_km, :mileage_display, :transmission, :fuel_type, :body_type, :description,
             :image_url, :url, :date_posted, 'active', :created_at, :updated_at, :created_at, :updated_at
         )
         ON CONFLICT(external_id) DO UPDATE SET
@@ -348,6 +357,7 @@ def upsert_cars_batch(cars_list: List[Dict[str, Any]]) -> int:
             transmission = CASE WHEN :specs_verified THEN excluded.transmission ELSE cars.transmission END,
             fuel_type = CASE WHEN :specs_verified THEN excluded.fuel_type ELSE cars.fuel_type END,
             body_type = CASE WHEN :specs_verified THEN excluded.body_type ELSE cars.body_type END,
+            description = CASE WHEN :specs_verified THEN excluded.description ELSE cars.description END,
             image_url = excluded.image_url,
             date_posted = excluded.date_posted,
             status = 'active',
