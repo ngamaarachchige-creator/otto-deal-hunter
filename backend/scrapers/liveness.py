@@ -1,11 +1,15 @@
 """Actively verifies whether 'active' listings are still live on the source site.
 
 Unlike the time-based mark_stale_listings() sweep (which only catches ads not
-re-seen in a scrape for a while), this hits each listing's own URL directly.
-Both Riyasewana and Ikman return HTTP 410 with an "ad no longer available"
-page once a listing is removed or sold, which is what we check for.
+re-seen in a scrape for a while), this hits each listing directly. The primary
+signal is the listing's own thumbnail image going missing (404) — both source
+sites drop the photo as soon as an ad is delisted/sold, and checking an image
+URL is far cheaper than rendering the full ad page. Only when there's no image
+on record, or the image check is inconclusive, do we fall back to fetching the
+ad page itself and checking for the "no longer available" HTTP 404/410.
 """
 import time
+import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable, Optional
 from scrapling import Fetcher
@@ -16,10 +20,46 @@ DEAD_STATUS_CODES = {404, 410}
 RATE_LIMITED_STATUS_CODES = {429}
 
 
-def _is_dead(url: str, fetcher: Fetcher, retries: int = 2) -> bool:
+class RateLimited(Exception):
+    pass
+
+
+def _image_dead(image_url: str) -> Optional[bool]:
+    """Returns True if the image is confirmed gone, False if confirmed present,
+    or None if inconclusive (network hiccup, unexpected status) — caller should
+    fall back to checking the ad page itself in that case."""
+    try:
+        # stream=True + immediate close: we only need the status line, not the
+        # image bytes, so this stays cheap even though HEAD isn't supported by
+        # every static file host.
+        resp = requests.get(image_url, timeout=10, stream=True)
+        resp.close()
+        if resp.status_code in DEAD_STATUS_CODES:
+            return True
+        if resp.status_code in RATE_LIMITED_STATUS_CODES:
+            raise RateLimited()
+        if resp.status_code == 200:
+            return False
+        return None
+    except RateLimited:
+        raise
+    except requests.RequestException:
+        return None
+
+
+def _is_dead(url: str, image_url: Optional[str], fetcher: Fetcher, retries: int = 2) -> bool:
     # Small per-request delay spreads out the batch so it doesn't read as a burst
     # to the source site's anti-bot/rate-limiting.
     time.sleep(0.4)
+
+    if image_url:
+        img_result = _image_dead(image_url)
+        if img_result is True:
+            return True
+        if img_result is False:
+            return False
+        # None (inconclusive) falls through to the ad-page check below.
+
     for attempt in range(retries + 1):
         try:
             resp = fetcher.get(url, timeout=15)
@@ -36,22 +76,20 @@ def _is_dead(url: str, fetcher: Fetcher, retries: int = 2) -> bool:
     return False
 
 
-class RateLimited(Exception):
-    pass
-
-
 def verify_active_listings_liveness(
     max_workers: int = 2,
-    batch_size: Optional[int] = 40,
+    batch_size: Optional[int] = 150,
     progress_callback: Optional[Callable[[int, int], None]] = None,
 ) -> dict:
-    """Checks 'active' listings' URLs and flips dead ones to 'stale'.
+    """Checks 'active' listings and flips dead ones to 'stale'.
 
     With batch_size set, only the batch_size listings least-recently actively
     verified are checked (oldest/never-verified first), so this can run as a
     quick step on every scrape without re-checking the whole table (which is
     slow and risks tripping the source site's rate limiter) — the full active
-    set just gets cycled through gradually across scrapes instead.
+    set just gets cycled through gradually across scrapes instead. Since the
+    image-first check is much cheaper than a full page render, this can afford
+    a bigger batch per run than the old page-only version could.
 
     Returns {"checked": n, "marked_stale": n}.
     """
@@ -62,13 +100,13 @@ def verify_active_listings_liveness(
     else:
         cursor = conn.cursor()
     query = (
-        "SELECT id, url FROM cars WHERE status = 'active' AND url IS NOT NULL AND url != '' "
+        "SELECT id, url, image_url FROM cars WHERE status = 'active' AND url IS NOT NULL AND url != '' "
         "ORDER BY last_verified_at ASC NULLS FIRST"
     )
     if batch_size:
         query += f" LIMIT {int(batch_size)}"
     cursor.execute(query)
-    rows = [(r["id"], r["url"]) for r in cursor.fetchall()]
+    rows = [(r["id"], r["url"], r["image_url"]) for r in cursor.fetchall()]
     conn.close()
 
     total = len(rows)
@@ -78,7 +116,7 @@ def verify_active_listings_liveness(
     checked = 0
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        future_to_id = {pool.submit(_is_dead, url, fetcher): car_id for car_id, url in rows}
+        future_to_id = {pool.submit(_is_dead, url, image_url, fetcher): car_id for car_id, url, image_url in rows}
         rate_limited = False
         for future in as_completed(future_to_id):
             car_id = future_to_id[future]
