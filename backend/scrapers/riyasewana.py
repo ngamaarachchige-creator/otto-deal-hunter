@@ -165,7 +165,7 @@ class RiyasewanaScraper:
         try:
             resp = self.fetcher.get(url)
             if resp.status in (429, 403):
-                record_rate_limit("riyasewana.com")
+                record_rate_limit("riyasewana.com", resp.status)
                 self.last_rate_limited = True
                 return results
             if resp.status != 200:

@@ -45,7 +45,7 @@ def _image_dead(image_url: str) -> Optional[bool]:
         if resp.status_code in DEAD_STATUS_CODES:
             return True
         if resp.status_code in RATE_LIMITED_STATUS_CODES:
-            record_rate_limit(urlparse(image_url).netloc)
+            record_rate_limit(urlparse(image_url).netloc, resp.status_code)
             raise RateLimited()
         if resp.status_code == 200:
             return False
@@ -84,7 +84,7 @@ def _is_dead(url: str, image_url: Optional[str], fetcher: Fetcher, retries: int 
         if resp.status in RATE_LIMITED_STATUS_CODES:
             # Getting rate-limited at all means we're going too fast for this site
             # right now — bail out of the whole batch instead of hammering it further.
-            record_rate_limit(host)
+            record_rate_limit(host, resp.status)
             raise RateLimited()
         return False
     return False

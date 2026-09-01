@@ -64,3 +64,18 @@ CREATE INDEX IF NOT EXISTS idx_cars_updated_at ON cars(updated_at DESC, id DESC)
 CREATE INDEX IF NOT EXISTS idx_cars_status ON cars(status);
 CREATE INDEX IF NOT EXISTS idx_pipeline_stage ON pipeline(stage);
 CREATE INDEX IF NOT EXISTS idx_pipeline_car_id ON pipeline(car_id);
+
+-- Durable history of rate-limit (429/403) hits across every scraper entry
+-- point and every environment (local Mac, GitHub Actions), so patterns over
+-- time (time of day, frequency, how long blocks actually last) are visible
+-- instead of only the current cooldown. See backend/scrapers/rate_limit_state.py
+-- and scripts/rate_limit_report.py.
+CREATE TABLE IF NOT EXISTS rate_limit_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    host TEXT NOT NULL,
+    hit_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    cooldown_seconds INTEGER,
+    source_env TEXT,
+    status_code INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_rate_limit_events_host_hit ON rate_limit_events(host, hit_at);

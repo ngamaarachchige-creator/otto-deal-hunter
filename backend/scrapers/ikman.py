@@ -46,7 +46,7 @@ class IkmanScraper:
         try:
             resp = self.fetcher.get(url)
             if resp.status in (429, 403):
-                record_rate_limit("ikman.lk")
+                record_rate_limit("ikman.lk", resp.status)
                 self.last_rate_limited = True
                 return results
             if resp.status != 200:

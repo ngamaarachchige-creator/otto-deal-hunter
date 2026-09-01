@@ -29,6 +29,70 @@ _STATE_PATH = os.path.join(
 _INITIAL_COOLDOWN_SECONDS = 10 * 60
 _MAX_COOLDOWN_SECONDS = 2 * 60 * 60
 
+# Which environment this process is running in, for the durable event log —
+# local dev/CI both hit the shared D1 DB independently, so knowing which one
+# recorded a given hit matters for reading the pattern later.
+_SOURCE_ENV = "github_actions" if os.environ.get("GITHUB_ACTIONS") else "local"
+
+
+def _log_event_to_db(host: str, cooldown_seconds: float, status_code: Optional[int]) -> None:
+    """Best-effort durable record of this hit, so rate_limit_report.py can show
+    real patterns over time instead of just "currently blocked or not". Never
+    lets a DB hiccup break the actual scraping/cooldown logic — this is purely
+    observability on top of it."""
+    try:
+        from ..database import get_db_connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO rate_limit_events (host, cooldown_seconds, source_env, status_code) "
+            "VALUES (:host, :cooldown_seconds, :source_env, :status_code)",
+            {
+                "host": host,
+                "cooldown_seconds": int(cooldown_seconds),
+                "source_env": _SOURCE_ENV,
+                "status_code": status_code,
+            },
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
+def _check_db_for_active_cooldown(host: str) -> Optional[float]:
+    """Cross-environment fallback: if this process has no local memory of a
+    cooldown for `host`, check the shared DB for a recent hit from *another*
+    environment (e.g. a GitHub Actions run blocking Riyasewana, checked from
+    the local Mac) and derive whether that cooldown would still be active.
+    Best-effort — returns None (not "clear") on any failure, so this never
+    makes local checks slower/riskier than before if D1 is unreachable."""
+    try:
+        from ..database import get_db_connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT hit_at, cooldown_seconds FROM rate_limit_events "
+            "WHERE host = :host ORDER BY hit_at DESC LIMIT 1",
+            {"host": host},
+        )
+        row = cursor.fetchone()
+        conn.close()
+        if not row:
+            return None
+        import datetime
+        hit_at = row["hit_at"]
+        if isinstance(hit_at, str):
+            hit_at = hit_at.replace("Z", "").split(".")[0]
+            hit_dt = datetime.datetime.fromisoformat(hit_at)
+        else:
+            return None
+        elapsed = (datetime.datetime.utcnow() - hit_dt).total_seconds()
+        remaining = (row["cooldown_seconds"] or 0) - elapsed
+        return remaining if remaining > 0 else None
+    except Exception:
+        return None
+
 
 def _load() -> dict:
     try:
@@ -47,19 +111,38 @@ def _save(state: dict) -> None:
 
 
 def is_cooling_down(host: str) -> Optional[float]:
-    """Returns seconds remaining in the cooldown for `host`, or None if clear."""
+    """Returns seconds remaining in the cooldown for `host`, or None if clear.
+
+    Checks local process/file memory first (fast, no network); only falls
+    back to a DB lookup when this process has no local record for the host
+    at all, so a cooldown set by a *different* environment (e.g. a GitHub
+    Actions run) is still respected here — the result is cached locally so
+    that fallback only costs one DB round trip per process, not per request.
+    """
     state = _load()
     entry = state.get(host)
-    if not entry:
-        return None
-    remaining = entry["until"] - time.time()
-    return remaining if remaining > 0 else None
+    if entry:
+        remaining = entry["until"] - time.time()
+        return remaining if remaining > 0 else None
+
+    # No local record at all for this host in this process — check the
+    # shared DB once in case another environment recorded a hit recently.
+    remaining = _check_db_for_active_cooldown(host)
+    now = time.time()
+    if remaining:
+        state[host] = {"until": now + remaining, "length": remaining, "last_hit": now}
+    else:
+        # Cache the "clear" result too (as a zero-length, already-expired
+        # entry) so a busy loop doesn't re-hit the DB on every call.
+        state[host] = {"until": now - 1, "length": 0, "last_hit": 0}
+    _save(state)
+    return remaining
 
 
 _MIN_SECONDS_BETWEEN_ESCALATIONS = 5.0
 
 
-def record_rate_limit(host: str) -> float:
+def record_rate_limit(host: str, status_code: Optional[int] = None) -> float:
     """Records a 429/403 from `host`, escalating the cooldown if one was already
     active or recently expired. Returns the new cooldown length in seconds.
 
@@ -79,4 +162,5 @@ def record_rate_limit(host: str) -> float:
         new_length = _INITIAL_COOLDOWN_SECONDS
     state[host] = {"until": now + new_length, "length": new_length, "last_hit": now}
     _save(state)
+    _log_event_to_db(host, new_length, status_code)
     return new_length

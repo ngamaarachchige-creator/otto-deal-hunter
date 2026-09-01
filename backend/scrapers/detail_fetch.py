@@ -78,7 +78,7 @@ def fetch_riyasewana_specs(url: str, timeout: int = 12) -> Optional[Dict[str, st
     if resp.status_code in (429, 403):
         # 403 included: Riyasewana escalated from a soft 429 to a hard 403 block
         # under sustained volume tonight — both need to trigger the same cooldown.
-        record_rate_limit(host)
+        record_rate_limit(host, resp.status_code)
         raise DetailRateLimited()
     if resp.status_code != 200:
         return None
@@ -115,7 +115,7 @@ def fetch_ikman_specs(url: str, timeout: int = 12) -> Optional[Dict[str, str]]:
     if resp.status_code in (429, 403):
         # 403 included: Riyasewana escalated from a soft 429 to a hard 403 block
         # under sustained volume tonight — both need to trigger the same cooldown.
-        record_rate_limit(host)
+        record_rate_limit(host, resp.status_code)
         raise DetailRateLimited()
     if resp.status_code != 200:
         return None
