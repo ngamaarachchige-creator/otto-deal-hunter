@@ -52,12 +52,14 @@ Capabilities & Tools:
 Behavior & Reasoning Guidelines:
 - Contextual Awareness: If the user refers to a car mentioned in previous messages (e.g. 'i want a low price', 'make it 50 million', 'show me that one'), retain the make/model from prior messages!
 - If the user asks for 'low price' or 'cheapest' without a numeric budget, do NOT invent a fake cap like 5M. Search with sort_by='price_asc' or search the brand directly.
-- Tone: Sharp, conversational, authentic Sri Lankan market expert.
+- Tone: Direct, plain, knowledgeable Sri Lankan market expert. Talk like a person, not a hype account: no forced slang, no stacked emoji, no "bro"/"fr fr"/"no cap" filler. A little personality is fine; performing enthusiasm is not.
+- Be brief. A conversational reply (no tool call) should be 1-3 short sentences unless you're actually walking through deal numbers. Never pad with repeated questions or restating what the user just said.
 - Never use em dashes ("—") or en dashes ("-"). Use colons, commas, or clean sentences.
+- If a search comes back empty or with results that clearly don't match what was asked (wrong model, unrelated body style), say plainly that the search didn't find a good match and offer to try a live scrape or a different query. Do NOT conclude or claim that a real, ordinarily common model "doesn't exist in Sri Lanka" or "isn't a thing" based on one bad or empty search result. A missing hit almost always means the local index needs a live scrape or the query needs rephrasing, not that the car itself is unavailable, since many well-known Suzuki/Toyota/etc. models sold new or reconditioned here for years.
 
 Training Examples (Few-Shot Prompting):
 User: "yo wht good boi, chilling?"
-Assistant: "Chillin' all day, bro! Ready to hunt some fresh deals. What model or budget are we looking to flip today?"
+Assistant: "All good. What model or budget do you want me to search?"
 
 User: "no cap find me a cheap wagon r under 7m"
 Assistant: <tool_call>{"name": "search_market_deals", "arguments": {"query": "Wagon R", "max_price": 7000000, "sort_by": "price_asc"}}</tool_call>
@@ -168,44 +170,70 @@ def execute_search_deals(
 ) -> List[Dict[str, Any]]:
     conn = get_db_connection()
     cursor = conn.cursor()
-    
-    sql = "SELECT * FROM cars WHERE price > 0 AND (status = 'active' OR status IS NULL)"
-    params = {}
-    
+
+    base_sql = "SELECT * FROM cars WHERE price > 0 AND (status = 'active' OR status IS NULL)"
+    base_params = {}
+
     # Extract year from query if present
     if not year and query:
         year_match = re.search(r'\b(19\d\d|20\d\d)\b', query)
         if year_match:
             year = int(year_match.group(1))
-            
+
     if year:
-        sql += " AND year = :year"
-        params["year"] = year
-        
-    if query and query.lower() not in ["all", "any", "cars", "deals", "cheap", "car"]:
-        cleaned_words = [w for w in query.lower().split() if w != str(year) and len(w) > 1]
-        for i, w in enumerate(cleaned_words):
-            param_key = f"w_{i}"
-            sql += f" AND (LOWER(make) LIKE :{param_key} OR LOWER(model) LIKE :{param_key} OR LOWER(title) LIKE :{param_key})"
-            params[param_key] = f"%{w}%"
-            
+        base_sql += " AND year = :year"
+        base_params["year"] = year
+
     if min_price:
-        sql += " AND price >= :min_price"
-        params["min_price"] = min_price
-        
+        base_sql += " AND price >= :min_price"
+        base_params["min_price"] = min_price
+
     if max_price:
-        sql += " AND price <= :max_price"
-        params["max_price"] = max_price
-        
+        base_sql += " AND price <= :max_price"
+        base_params["max_price"] = max_price
+
     if fuel_type:
-        sql += " AND LOWER(fuel_type) = LOWER(:fuel_type)"
-        params["fuel_type"] = fuel_type
-        
-    sql += " ORDER BY updated_at DESC LIMIT 120"
-    cursor.execute(sql, params)
-    rows = cursor.fetchall()
+        base_sql += " AND LOWER(fuel_type) = LOWER(:fuel_type)"
+        base_params["fuel_type"] = fuel_type
+
+    rows = []
+    if query and query.lower() not in ["all", "any", "cars", "deals", "cheap", "car"]:
+        # Was dropping any word with len <= 1, which silently threw away the "R" in
+        # "Wagon R" (a real, common Suzuki model here) and left the query as just
+        # "wagon" — matching anything with "wagon" in it, including unrelated
+        # Mitsubishi Lancer Wagon listings. Keep every word.
+        cleaned_words = [w for w in query.lower().split() if w and w != str(year)]
+        phrase = " ".join(cleaned_words)
+
+        if phrase:
+            # Try the full phrase together first — this is what actually
+            # distinguishes "Wagon R" from any car whose title merely contains the
+            # standalone word "wagon". Only fall back to requiring each word to
+            # appear *somewhere* (not necessarily together, and much noisier for
+            # short tokens like "r") when the phrase itself gets zero hits.
+            phrase_sql = base_sql + " AND (LOWER(title) LIKE :phrase OR LOWER(model) LIKE :phrase OR LOWER(make) LIKE :phrase)"
+            phrase_params = {**base_params, "phrase": f"%{phrase}%"}
+            phrase_sql += " ORDER BY updated_at DESC LIMIT 120"
+            cursor.execute(phrase_sql, phrase_params)
+            rows = cursor.fetchall()
+
+        if not rows and cleaned_words:
+            word_sql = base_sql
+            word_params = dict(base_params)
+            for i, w in enumerate(cleaned_words):
+                param_key = f"w_{i}"
+                word_sql += f" AND (LOWER(make) LIKE :{param_key} OR LOWER(model) LIKE :{param_key} OR LOWER(title) LIKE :{param_key})"
+                word_params[param_key] = f"%{w}%"
+            word_sql += " ORDER BY updated_at DESC LIMIT 120"
+            cursor.execute(word_sql, word_params)
+            rows = cursor.fetchall()
+    else:
+        base_sql += " ORDER BY updated_at DESC LIMIT 120"
+        cursor.execute(base_sql, base_params)
+        rows = cursor.fetchall()
+
     conn.close()
-    
+
     cars = [dict(r) for r in rows]
     benchmarks = calculate_market_benchmarks()
     enriched = [enrich_car_with_valuation(c, benchmarks) for c in cars]
