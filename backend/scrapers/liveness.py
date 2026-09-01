@@ -157,7 +157,11 @@ def verify_active_listings_liveness(
         cursor = conn.cursor()
         placeholder = "%s" if IS_POSTGRES else "?"
         now_expr = "NOW()" if IS_POSTGRES else "CURRENT_TIMESTAMP"
-        chunk = 500  # keep IN() clauses reasonably sized
+        # D1 caps bound parameters at 100 per statement (confirmed empirically —
+        # 300 threw "too many SQL variables"); 100 stays comfortably under
+        # SQLite's much higher default (999) and Postgres too, so one number
+        # works safely across every backend this file might run against.
+        chunk = 100
         for i in range(0, len(checked_ids), chunk):
             batch = checked_ids[i:i + chunk]
             in_clause = ",".join([placeholder] * len(batch))
