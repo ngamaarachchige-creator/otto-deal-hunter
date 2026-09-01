@@ -19,3 +19,10 @@ venv/
 
 # Ephemeral scraper rate-limit cooldown state (local, timestamp-only, no reason to version)
 data/rate_limit_state.json
+
+# Cloudflare Worker (cf-worker/) build/auth artifacts — never contains secrets
+# itself (the Worker's AUTH_TOKEN is set server-side via `wrangler secret put`),
+# but keep local tooling state out of git regardless.
+cf-worker/node_modules/
+cf-worker/.wrangler/
+cf-worker/.dev.vars

@@ -17,10 +17,20 @@ if os.path.exists(env_path):
 DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("SUPABASE_DB_URL") or os.environ.get("POSTGRES_URL")
 IS_POSTGRES = bool(DATABASE_URL and DATABASE_URL.startswith("postgres"))
 
+# D1 has no normal connection string — it's only reachable via the proxy Worker
+# in cf-worker/. When configured, it takes priority: D1 uses the same SQLite
+# dialect and :named-param style as the local-SQLite branch below, so every
+# query in this file works unchanged against it through d1_connector.py's
+# sqlite3-shaped shim.
+from .d1_connector import is_d1_configured, get_d1_connection
+IS_D1 = is_d1_configured()
+
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "cars.db")
 
 def get_db_connection():
-    if IS_POSTGRES:
+    if IS_D1:
+        return get_d1_connection()
+    elif IS_POSTGRES:
         import psycopg2
         import psycopg2.extras
         conn = psycopg2.connect(DATABASE_URL)
@@ -33,9 +43,16 @@ def get_db_connection():
         return conn
 
 def init_db():
+    if IS_D1:
+        # Schema is applied once via `wrangler d1 execute --file=schema.sql`
+        # (see cf-worker/schema.sql) rather than on every app startup — the
+        # SQLite migration-check path below relies on PRAGMA table_info, which
+        # the D1 shim doesn't need to support since it's never exercised here.
+        return
+
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     if IS_POSTGRES:
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS cars (

@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "otto-d1-proxy",
+  "main": "src/index.js",
+  "compatibility_date": "2026-06-24",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "otto-deal-hunter",
+      "database_id": "3b64ebc9-21a5-447f-aa8e-a3ae0008233c"
+    }
+  ]
+}
