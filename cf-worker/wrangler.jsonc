@@ -18,5 +18,8 @@
     // real headroom here. This cuts the full 24-make rotation cycle from
     // ~1 day down to ~8 hours (24 makes / 3 per run / 24 runs-a-day).
     "crons": ["17 * * * *"]
+  },
+  "observability": {
+    "enabled": true
   }
 }

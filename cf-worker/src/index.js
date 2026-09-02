@@ -80,11 +80,24 @@ async function triggerScrape(env) {
     const text = await resp.text().catch(() => "");
     throw new Error(`dispatch failed: ${resp.status} ${text}`);
   }
+  console.log(`triggerScrape: dispatched OK (status ${resp.status})`);
 }
 
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(triggerScrape(env));
+    // Previously this ran bare inside ctx.waitUntil() with nothing catching
+    // or logging failure -- combined with observability being off by
+    // default for this Worker, a failed dispatch (bad token, GitHub API
+    // hiccup, etc.) would fail completely silently with zero trace anywhere.
+    // Explicit try/catch + console.log/error here, plus observability now
+    // enabled in wrangler.jsonc, means a failure is actually visible instead
+    // of just "no new GitHub Actions run showed up, cause unknown."
+    console.log(`scheduled: firing at ${new Date(event.scheduledTime).toISOString()} (cron ${event.cron})`);
+    ctx.waitUntil(
+      triggerScrape(env).catch((err) => {
+        console.error(`scheduled: triggerScrape failed: ${err && err.message || err}`);
+      })
+    );
   },
 
   async fetch(request, env) {
