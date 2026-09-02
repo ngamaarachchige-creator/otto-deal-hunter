@@ -212,6 +212,46 @@ def init_db():
         conn.commit()
         conn.close()
 
+# D1's free tier caps rows_written at 100,000/day account-wide, resetting at
+# 00:00 UTC. This tracks a running tally so scheduled_scrape.py can check
+# remaining headroom and stop early rather than risk crossing into billing --
+# a safety net alongside (not a replacement for) the upsert WHERE clause
+# above, which is what actually cuts the write volume down in the first place.
+def get_write_budget_today() -> int:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    if IS_POSTGRES:
+        cursor.execute("SELECT rows_written FROM write_budget WHERE utc_date = %(d)s", {"d": today})
+    else:
+        cursor.execute("SELECT rows_written FROM write_budget WHERE utc_date = :d", {"d": today})
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return 0
+    return row["rows_written"] if hasattr(row, "keys") else row[0]
+
+def record_write_budget(rows: int) -> None:
+    if rows <= 0:
+        return
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    if IS_POSTGRES:
+        cursor.execute(
+            "INSERT INTO write_budget (utc_date, rows_written) VALUES (%(d)s, %(n)s) "
+            "ON CONFLICT(utc_date) DO UPDATE SET rows_written = write_budget.rows_written + %(n)s",
+            {"d": today, "n": rows}
+        )
+    else:
+        cursor.execute(
+            "INSERT INTO write_budget (utc_date, rows_written) VALUES (:d, :n) "
+            "ON CONFLICT(utc_date) DO UPDATE SET rows_written = write_budget.rows_written + :n",
+            {"d": today, "n": rows}
+        )
+    conn.commit()
+    conn.close()
+
 def mark_stale_listings(stale_after_days: int = 14) -> int:
     """Soft-hides ads not re-seen in a scrape for a while (likely sold/removed).
 
@@ -238,6 +278,16 @@ def mark_stale_listings(stale_after_days: int = 14) -> int:
     return affected
 
 def upsert_cars_batch(cars_list: List[Dict[str, Any]]) -> int:
+    # The ON CONFLICT DO UPDATE below carries a WHERE clause so a re-scrape of
+    # a listing that hasn't actually changed performs no write at all. Without
+    # it, every scraped item unconditionally re-wrote its row on every run --
+    # with the scraper cycling through all active listings multiple times a
+    # day, that alone burned through D1's 100k rows_written/day free-tier cap
+    # (hit 75% of it before this fix). The WHERE still lets a listing's
+    # last_seen_at heartbeat advance at least once every 12h even with zero
+    # content changes, so the staleness detector (mark_stale_listings, keyed
+    # on last_seen_at) stays correct -- it just no longer pays for a write on
+    # every single sighting.
     if not cars_list:
         return 0
 
@@ -280,6 +330,13 @@ def upsert_cars_batch(cars_list: List[Dict[str, Any]]) -> int:
             status = 'active',
             last_seen_at = EXCLUDED.updated_at,
             updated_at = EXCLUDED.updated_at
+        WHERE
+            cars.price IS DISTINCT FROM EXCLUDED.price
+            OR cars.status IS DISTINCT FROM 'active'
+            OR cars.mileage_km IS DISTINCT FROM EXCLUDED.mileage_km
+            OR cars.location IS DISTINCT FROM EXCLUDED.location
+            OR cars.image_url IS DISTINCT FROM EXCLUDED.image_url
+            OR cars.last_seen_at < NOW() - INTERVAL '12 hours'
         """
         params_list = []
         for car_data in cars_list:
@@ -380,9 +437,20 @@ def upsert_cars_batch(cars_list: List[Dict[str, Any]]) -> int:
             status = 'active',
             last_seen_at = excluded.updated_at,
             updated_at = excluded.updated_at
+        WHERE
+            cars.price IS NOT excluded.price
+            OR cars.status IS NOT 'active'
+            OR cars.mileage_km IS NOT excluded.mileage_km
+            OR cars.location IS NOT excluded.location
+            OR cars.image_url IS NOT excluded.image_url
+            OR cars.last_seen_at < datetime('now', '-12 hours')
         """, params_list)
 
-        count = len(params_list)
+        # cursor.rowcount reflects rows the WHERE clause above actually let
+        # through, not len(params_list) (items merely attempted) -- this is
+        # what callers should log/budget against, since D1 only bills for
+        # rows genuinely written.
+        count = cursor.rowcount if cursor.rowcount is not None and cursor.rowcount >= 0 else len(params_list)
         conn.commit()
         conn.close()
         return count

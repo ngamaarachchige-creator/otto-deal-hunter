@@ -79,3 +79,14 @@ CREATE TABLE IF NOT EXISTS rate_limit_events (
     status_code INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_rate_limit_events_host_hit ON rate_limit_events(host, hit_at);
+
+-- Running tally of D1 rows_written per UTC day, incremented by
+-- record_write_budget() after every scrape run. D1's free tier caps
+-- rows_written at 100,000/day (account-wide, resets 00:00 UTC) -- this table
+-- lets scheduled_scrape.py check remaining headroom before doing more work
+-- and stop early rather than risk crossing into billing. See
+-- backend/database.py get_write_budget_today() / record_write_budget().
+CREATE TABLE IF NOT EXISTS write_budget (
+    utc_date TEXT PRIMARY KEY,
+    rows_written INTEGER NOT NULL DEFAULT 0
+);
