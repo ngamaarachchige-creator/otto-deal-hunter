@@ -23,7 +23,16 @@ CRITICAL: NEVER use em dashes ("—") or en dashes ("-") in your response. Use c
 6. If the seller's own description is included, read it for real signal: accessories/mods mentioned (raise or lower value depending), any faults or "as-is" language admitted, service/accident history claims. Weigh it against the photo and price rather than repeating it.
 7. A one-line verdict: BUY / NEGOTIATE / PASS, with the single biggest reason why.
 
-Format your response using Markdown bullet points (*). Keep the whole answer under 150 words. Be direct and practical. Do not repeat the input data back verbatim."""
+Format your response using Markdown bullet points (*). Keep the whole answer under 150 words. Be direct and practical. Do not repeat the input data back verbatim.
+
+/no_think"""
+# ^ qwen3-vl defaults to its "thinking" mode when no think flag is sent, and
+# for this model that reliably spirals into a multi-thousand-token internal
+# monologue before ever producing the bullet-point answer, easily blowing
+# past this request's own timeout (confirmed live against the model: a
+# trivial prompt without /no_think took 100s+ and never finished; with
+# /no_think it answered in 2-3s). The literal /no_think directive is Qwen3's
+# documented way to force it off regardless of other params.
 
 
 def _fetch_image_b64(url: str) -> Optional[str]:
@@ -68,6 +77,7 @@ def inspect_car(car: Dict[str, Any]) -> str:
             user_message,
         ],
         "stream": False,
+        "think": False,
     }
 
     resp = requests.post(f"{OLLAMA_HOST}/api/chat", json=payload, timeout=90)

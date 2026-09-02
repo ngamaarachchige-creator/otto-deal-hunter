@@ -73,7 +73,18 @@ User: "make it under 4 million lkr"
 Assistant: <tool_call>{"name": "search_market_deals", "arguments": {"query": "Celerio", "max_price": 4000000, "sort_by": "price_asc"}}</tool_call>
 
 User: "any make or model, just find good deals under 10 million with decent flip profit"
-Assistant: <tool_call>{"name": "search_market_deals", "arguments": {"query": "all", "max_price": 10000000, "sort_by": "discount_desc"}}</tool_call>"""
+Assistant: <tool_call>{"name": "search_market_deals", "arguments": {"query": "all", "max_price": 10000000, "sort_by": "discount_desc"}}</tool_call>
+
+/no_think"""
+# ^ qwen3-vl silently ignores the API-level "think": false flag whenever a
+# `tools` array is attached to the request (confirmed live: the same prompt
+# without tools honors think:false in ~2s with no thinking block; with tools
+# attached it goes into a runaway multi-thousand-token reasoning spiral that
+# blows past the 35s request timeout and often never emits a real answer,
+# which is exactly what made the copilot/AI-inspect feature look "not
+# working"). Appending the literal /no_think directive to the system prompt
+# is Qwen3's own documented escape hatch and reliably keeps responses under
+# 10s even with tools attached.
 
 TOOLS_SCHEMA = [
     {
@@ -330,7 +341,7 @@ def run_copilot_agent(user_message: str, history: Optional[List[Dict[str, str]]]
     }
 
     try:
-        resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=payload, timeout=35)
+        resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=payload, timeout=55)
         resp.raise_for_status()
         data = resp.json()
     except Exception as e:
@@ -424,7 +435,7 @@ def run_copilot_agent(user_message: str, history: Optional[List[Dict[str, str]]]
             "think": False
         }
         try:
-            synth_resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=second_payload, timeout=35).json()
+            synth_resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=second_payload, timeout=55).json()
             final_text = synth_resp.get("message", {}).get("content", "").strip()
         except Exception:
             final_text = f"Found {len(deals)} top matching deals in the market:"
@@ -482,7 +493,7 @@ def run_copilot_agent(user_message: str, history: Optional[List[Dict[str, str]]]
             "think": False
         }
         try:
-            synth_resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=second_payload, timeout=35).json()
+            synth_resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=second_payload, timeout=55).json()
             final_text = synth_resp.get("message", {}).get("content", "").strip()
         except Exception:
             final_text = f"Live scrape completed! Ingested {scrape_result['new_listings_count']} listings. Here are the top results:"
