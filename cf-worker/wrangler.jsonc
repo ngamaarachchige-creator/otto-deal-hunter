@@ -9,5 +9,14 @@
       "database_name": "otto-deal-hunter",
       "database_id": "3b64ebc9-21a5-447f-aa8e-a3ae0008233c"
     }
-  ]
+  ],
+  "triggers": {
+    // Every hour, not every 3: Riyasewana's block is a hard per-attempt
+    // ceiling regardless of how often we ask (already handled by the
+    // cooldown-aware scraper, see rate_limit_state.py), and Ikman has taken
+    // today's load with zero rate-limit hits in any run's logs, so there's
+    // real headroom here. This cuts the full 24-make rotation cycle from
+    // ~1 day down to ~8 hours (24 makes / 3 per run / 24 runs-a-day).
+    "crons": ["17 * * * *"]
+  }
 }

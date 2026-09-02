@@ -2,12 +2,15 @@ name: Scheduled scrape
 
 on:
   schedule:
-    # Every 3 hours, off-round minute. Confirmed firing reliably as of
-    # 2026-09-02 (was previously only twice-daily and, before that, not
-    # firing at all — see run history). Now paired with make-rotation in
-    # scripts/scheduled_scrape.py (SCRAPE_INTERVAL_HOURS below must match
-    # this cadence for the rotation math to advance one slot per run).
-    - cron: "7 */3 * * *"
+    # GitHub's own `schedule:` trigger turned out to be unreliable in
+    # practice (some slots delayed 1h+, others skipped entirely under
+    # platform load — it's documented as best-effort, not guaranteed). The
+    # real driver is now the otto-d1-proxy Cloudflare Worker's own Cron
+    # Trigger (see cf-worker/wrangler.jsonc, cron "17 * * * *"), which calls
+    # this workflow's dispatch API directly and runs on Cloudflare's edge
+    # infra independent of GitHub Actions' queue or any of our own devices.
+    # This entry is left in as a redundant backup in case that ever breaks.
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       pages_per_source:
@@ -39,5 +42,5 @@ jobs:
           D1_PROXY_AUTH_TOKEN: ${{ secrets.D1_PROXY_AUTH_TOKEN }}
           SCRAPE_PAGES_PER_SOURCE: ${{ github.event.inputs.pages_per_source || '20' }}
           SCRAPE_MAKES_PER_RUN: ${{ github.event.inputs.makes_per_run || '3' }}
-          SCRAPE_INTERVAL_HOURS: "3"
+          SCRAPE_INTERVAL_HOURS: "1"
         run: python scripts/scheduled_scrape.py

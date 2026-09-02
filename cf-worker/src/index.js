@@ -54,7 +54,39 @@ async function handleBatch(request, env) {
   }), { headers: { "content-type": "application/json" } });
 }
 
+const SCRAPE_DISPATCH_URL =
+  "https://api.github.com/repos/ngamaarachchige-creator/otto-deal-hunter/actions/workflows/scrape.yml/dispatches";
+
+// GitHub Actions' own `schedule:` cron trigger runs on shared, lowest-priority
+// queue infrastructure and is documented by GitHub as best-effort: it can be
+// delayed by an hour or more, or silently skipped entirely, under platform
+// load — confirmed in practice (some 3-hour slots never fired, others fired
+// ~1.5h late). Cloudflare Workers' Cron Triggers run on Cloudflare's own edge
+// infra, independent of GitHub Actions' queue and independent of any of our
+// own devices being powered on, so this is the actually-reliable scheduler:
+// it just calls GitHub's workflow_dispatch REST API directly on a fixed cron.
+async function triggerScrape(env) {
+  const resp = await fetch(SCRAPE_DISPATCH_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.GH_DISPATCH_TOKEN}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      "User-Agent": "otto-d1-proxy-cron",
+    },
+    body: JSON.stringify({ ref: "main" }),
+  });
+  if (resp.status !== 204) {
+    const text = await resp.text().catch(() => "");
+    throw new Error(`dispatch failed: ${resp.status} ${text}`);
+  }
+}
+
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(triggerScrape(env));
+  },
+
   async fetch(request, env) {
     if (!checkAuth(request, env)) return unauthorized();
 
