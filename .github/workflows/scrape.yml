@@ -2,16 +2,22 @@ name: Scheduled scrape
 
 on:
   schedule:
-    # Twice daily, off-round minutes so this doesn't land at the same instant
-    # as every other "every 12h" job on the internet. Times are UTC.
-    - cron: "17 2 * * *"
-    - cron: "43 14 * * *"
+    # Every 3 hours, off-round minute. Confirmed firing reliably as of
+    # 2026-09-02 (was previously only twice-daily and, before that, not
+    # firing at all — see run history). Now paired with make-rotation in
+    # scripts/scheduled_scrape.py (SCRAPE_INTERVAL_HOURS below must match
+    # this cadence for the rotation math to advance one slot per run).
+    - cron: "7 */3 * * *"
   workflow_dispatch:
     inputs:
       pages_per_source:
-        description: "Pages to scrape per source this run"
+        description: "Pages to scrape per make per source this run"
         required: false
-        default: "15"
+        default: "20"
+      makes_per_run:
+        description: "How many makes to rotate through this run"
+        required: false
+        default: "3"
 
 jobs:
   scrape:
@@ -31,5 +37,7 @@ jobs:
         env:
           D1_PROXY_URL: ${{ secrets.D1_PROXY_URL }}
           D1_PROXY_AUTH_TOKEN: ${{ secrets.D1_PROXY_AUTH_TOKEN }}
-          SCRAPE_PAGES_PER_SOURCE: ${{ github.event.inputs.pages_per_source || '15' }}
+          SCRAPE_PAGES_PER_SOURCE: ${{ github.event.inputs.pages_per_source || '20' }}
+          SCRAPE_MAKES_PER_RUN: ${{ github.event.inputs.makes_per_run || '3' }}
+          SCRAPE_INTERVAL_HOURS: "3"
         run: python scripts/scheduled_scrape.py
