@@ -252,7 +252,13 @@ export async function loadDossierTab(selection = null) {
   initDossierSearch();
   if (selection) currentSelectedData = selection;
   if (!currentSelectedData) {
-    currentSelectedData = DOSSIER_MODELS['aqua_2014'];
+    // Default view before any search — build it from live data too, the same
+    // way a real selection is built, rather than the frozen curated numbers
+    // (which drift from the real market exactly like the bug this whole
+    // dossier rewrite was built to fix).
+    const list = await ensureModelListLoaded();
+    const defaultRow = list.find(r => r.make === 'Toyota' && r.model === 'Aqua' && r.year === 2014);
+    currentSelectedData = defaultRow ? buildLiveDossierData(defaultRow) : DOSSIER_MODELS['aqua_2014'];
     const input = document.getElementById('dossierSearchInput');
     if (input) input.value = currentSelectedData.name;
   }

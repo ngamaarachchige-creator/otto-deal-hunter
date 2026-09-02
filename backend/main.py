@@ -485,8 +485,22 @@ def export_deals_csv(
         headers={"Content-Disposition": "attachment; filename=lanka_car_deals.csv"}
     )
 
+class NoCacheStaticFiles(StaticFiles):
+    """Forces browsers to revalidate every static asset (JS/CSS/etc.) on each
+    load instead of trusting their own heuristic freshness lifetime — plain
+    StaticFiles sends an ETag/Last-Modified but no Cache-Control, so without
+    this a browser can silently keep serving a pre-deploy JS bundle for a
+    while after we push a fix. Revalidation is cheap (a 304 when nothing
+    changed, via the ETag Starlette already sets), so this doesn't add real
+    load, it just guarantees deployed fixes actually reach the browser."""
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 if os.path.exists(FRONTEND_DIR):
-    app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+    app.mount("/static", NoCacheStaticFiles(directory=FRONTEND_DIR), name="static")
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
