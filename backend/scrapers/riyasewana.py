@@ -3,7 +3,9 @@ import time
 import urllib.parse
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-from scrapling import Fetcher
+import curl_cffi.requests
+from bs4 import BeautifulSoup
+from .rate_limit_state import is_cooling_down, record_rate_limit, execute_with_backoff
 
 # Common Sri Lankan districts for normalization
 SRI_LANKA_DISTRICTS = [
@@ -123,8 +125,10 @@ def normalize_district(location: str) -> str:
 
 class RiyasewanaScraper:
     def __init__(self):
-        self.fetcher = Fetcher()
-        self.base_url = "https://riyasewana.com/search"
+        self.base_url = "https://riyasewana.com"
+
+    def _fetch_with_backoff(self, url: str):
+        return execute_with_backoff(curl_cffi.requests.get, "riyasewana.com", url=url, impersonate="chrome120", timeout=10, verify=False)
 
     def build_search_url(self, query: str = "", make: str = "", model: str = "", 
                          min_price: float = None, max_price: float = None, 
@@ -163,26 +167,20 @@ class RiyasewanaScraper:
             self.last_rate_limited = True
             return results
         try:
-            resp = self.fetcher.get(url)
-            if resp.status in (429, 403):
-                record_rate_limit("riyasewana.com", resp.status)
-                self.last_rate_limited = True
-                return results
-            if resp.status != 200:
-                print(f"[Riyasewana] Non-200 response: {resp.status} for {url}")
-                return results
-
-            ad_anchors = resp.css('a[href*="/buy/"]')
+            resp = self._fetch_with_backoff(url)
+            
+            soup = BeautifulSoup(resp.content, "html.parser")
+            ad_anchors = soup.select('a[href*="/buy/"]')
             seen_urls = set()
 
             for a in ad_anchors:
-                item_url = a.attrib.get('href', '')
+                item_url = a.get('href', '')
                 if not item_url or item_url in seen_urls:
                     continue
 
                 container = a.parent
                 for _ in range(4):
-                    if container and len(container.get_all_text().strip()) > 30:
+                    if container and len(container.get_text(separator=' ', strip=True)) > 30:
                         break
                     if container:
                         container = container.parent
@@ -190,7 +188,7 @@ class RiyasewanaScraper:
                 if not container:
                     continue
 
-                card_text = container.get_all_text().strip()
+                card_text = container.get_text(separator=' ', strip=True)
                 if 'km' not in card_text and 'Rs.' not in card_text and 'Negotiable' not in card_text:
                     continue
 
@@ -230,10 +228,10 @@ class RiyasewanaScraper:
                 district = normalize_district(location)
 
                 # Image Extraction
-                img_el = container.css('img')
+                img_el = container.select('img')
                 img_url = ""
                 if img_el:
-                    raw_src = img_el[0].attrib.get('src', '')
+                    raw_src = img_el[0].get('src', '')
                     if raw_src.startswith('//'):
                         img_url = 'https:' + raw_src
                     elif raw_src.startswith('http'):

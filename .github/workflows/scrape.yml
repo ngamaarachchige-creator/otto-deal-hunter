@@ -40,6 +40,7 @@ jobs:
         env:
           D1_PROXY_URL: ${{ secrets.D1_PROXY_URL }}
           D1_PROXY_AUTH_TOKEN: ${{ secrets.D1_PROXY_AUTH_TOKEN }}
+          PROXY_POOL: ${{ secrets.PROXY_POOL }}
           SCRAPE_PAGES_PER_SOURCE: ${{ github.event.inputs.pages_per_source || '20' }}
           SCRAPE_MAKES_PER_RUN: ${{ github.event.inputs.makes_per_run || '3' }}
           SCRAPE_INTERVAL_HOURS: "1"

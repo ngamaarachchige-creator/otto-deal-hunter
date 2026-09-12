@@ -24,9 +24,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable, Dict, List, Optional
 from urllib.parse import urlparse
-import requests
+import curl_cffi.requests
 
-from .rate_limit_state import is_cooling_down, record_rate_limit
+from .rate_limit_state import is_cooling_down, record_rate_limit, execute_with_backoff
 
 _HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -72,8 +72,11 @@ def fetch_riyasewana_specs(url: str, timeout: int = 12) -> Optional[Dict[str, st
     if is_cooling_down(host):
         return None
     try:
-        resp = requests.get(url, timeout=timeout, headers=_HEADERS)
-    except requests.RequestException:
+        resp = execute_with_backoff(curl_cffi.requests.get, host, url=url, impersonate="chrome120", timeout=timeout, verify=False)
+    except Exception as e:
+        if "Max retries" in str(e):
+            raise DetailRateLimited()
+        return None
         return None
     if resp.status_code in (429, 403):
         # 403 included: Riyasewana escalated from a soft 429 to a hard 403 block
@@ -109,8 +112,11 @@ def fetch_ikman_specs(url: str, timeout: int = 12) -> Optional[Dict[str, str]]:
     if is_cooling_down(host):
         return None
     try:
-        resp = requests.get(url, timeout=timeout, headers=_HEADERS)
-    except requests.RequestException:
+        resp = execute_with_backoff(curl_cffi.requests.get, host, url=url, impersonate="chrome120", timeout=timeout, verify=False)
+    except Exception as e:
+        if "Max retries" in str(e):
+            raise DetailRateLimited()
+        return None
         return None
     if resp.status_code in (429, 403):
         # 403 included: Riyasewana escalated from a soft 429 to a hard 403 block

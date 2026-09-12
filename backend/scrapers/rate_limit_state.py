@@ -164,3 +164,60 @@ def record_rate_limit(host: str, status_code: Optional[int] = None) -> float:
     _save(state)
     _log_event_to_db(host, new_length, status_code)
     return new_length
+
+
+import random
+from typing import Callable, Any
+import curl_cffi
+
+import random
+from typing import Callable, Any
+import curl_cffi.requests
+import os
+
+PROXY_POOL = []
+env_proxies = os.environ.get("PROXY_POOL", "")
+if env_proxies:
+    PROXY_POOL = [p.strip() for p in env_proxies.split(",") if p.strip()]
+
+def get_proxy():
+    if not PROXY_POOL:
+        return None
+    p = random.choice(PROXY_POOL)
+    return {"http": p, "https": p}
+
+def execute_with_backoff(request_func: Callable[..., Any], host: str, max_retries: int = 5, base_delay: float = 2.0, max_delay: float = 60.0, **kwargs) -> Any:
+    import time
+    for attempt in range(max_retries):
+        if is_cooling_down(host):
+            time.sleep(1) 
+        
+        proxies = get_proxy()
+        if proxies:
+            kwargs["proxies"] = proxies
+            
+        try:
+            response = request_func(**kwargs)
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise e
+            time.sleep(base_delay * (2 ** attempt))
+            continue
+            
+        if response.status_code == 200:
+            return response
+        
+        if response.status_code in [429, 503, 403]:
+            record_rate_limit(host, response.status_code)
+            retry_after = response.headers.get("Retry-After")
+            if retry_after and retry_after.isdigit():
+                sleep_duration = float(retry_after)
+            else:
+                calculated_backoff = min(max_delay, base_delay * (2 ** attempt))
+                sleep_duration = random.uniform(0, calculated_backoff)
+            
+            time.sleep(sleep_duration)
+        else:
+            response.raise_for_status()
+            
+    raise Exception("Max retries exceeded with persistent rate limiting.")

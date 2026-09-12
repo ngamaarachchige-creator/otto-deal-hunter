@@ -2,13 +2,17 @@ import re
 import time
 import json
 from typing import List, Dict, Any, Optional
-from scrapling import Fetcher
+import curl_cffi.requests
+from bs4 import BeautifulSoup
 from .riyasewana import clean_price, clean_mileage, detect_make_and_model, normalize_district
+from .rate_limit_state import is_cooling_down, record_rate_limit, execute_with_backoff
 
 class IkmanScraper:
     def __init__(self):
-        self.fetcher = Fetcher()
         self.base_url = "https://ikman.lk/en/ads/sri-lanka/cars"
+
+    def _fetch_with_backoff(self, url: str):
+        return execute_with_backoff(curl_cffi.requests.get, "ikman.lk", url=url, impersonate="chrome120", timeout=10, verify=False)
 
     def build_search_url(self, query: str = "", make: str = "", model: str = "",
                          min_price: float = None, max_price: float = None,
@@ -39,39 +43,29 @@ class IkmanScraper:
         url = self.build_search_url(query=query, make=make, model=model,
                                      min_price=min_price, max_price=max_price, page=page_num)
         results = []
-        from .rate_limit_state import is_cooling_down, record_rate_limit
         if is_cooling_down("ikman.lk"):
             self.last_rate_limited = True
             return results
         try:
-            resp = self.fetcher.get(url)
-            if resp.status in (429, 403):
-                record_rate_limit("ikman.lk", resp.status)
-                self.last_rate_limited = True
-                return results
-            if resp.status != 200:
-                print(f"[Ikman] Non-200 response: {resp.status} for {url}")
-                return results
-
-            # Select ad item links
-            ad_links = resp.css('a[href*="/en/ad/"]')
+            resp = self._fetch_with_backoff(url)
+            
+            soup = BeautifulSoup(resp.content, "html.parser")
+            ad_links = soup.select('a[href*="/en/ad/"]')
             seen_urls = set()
 
             for link_el in ad_links:
-                href = link_el.attrib.get('href', '')
+                href = link_el.get('href', '')
                 if not href or href in seen_urls or "/ads/" in href:
                     continue
                 seen_urls.add(href)
                 
                 full_url = f"https://ikman.lk{href}" if href.startswith('/') else href
                 
-                # External ID
                 slug_match = re.search(r'/en/ad/([^/?]+)', href)
                 external_id = f"ikman_{slug_match.group(1)}" if slug_match else f"ikman_{abs(hash(href))}"
                 
-                # Title
-                title = link_el.attrib.get('title', '')
-                card_text = link_el.get_all_text().replace('\n', ' ').strip()
+                title = link_el.get('title', '')
+                card_text = link_el.get_text(separator=' ', strip=True).replace('\n', ' ')
                 
                 if not title:
                     title_match = re.search(r'([A-Za-z0-9\s\-]+(19\d{2}|20\d{2}))', card_text)
@@ -82,20 +76,16 @@ class IkmanScraper:
                 
                 title = title.replace("for sale", "").strip()
 
-                # Extract year
                 year_match = re.search(r'\b(19\d{2}|20\d{2})\b', title + " " + card_text)
                 year_num = int(year_match.group(1)) if year_match else None
 
-                # Extract Price using robust parser
                 price_match = re.search(r'Rs\.?\s*([\d,]+)', card_text)
                 raw_price = price_match.group(0) if price_match else ("Negotiable" if "negotiable" in card_text.lower() else "")
                 price_num, price_display, is_neg = clean_price(raw_price, card_text)
 
-                # Extract Mileage (Filtered for fake 1 km / 10 km placeholders)
                 mileage_match = re.search(r'([\d,]+)\s*km', card_text, re.IGNORECASE)
                 mileage_num, mileage_display = clean_mileage(mileage_match.group(0) if mileage_match else "", year_num)
 
-                # Extract Location
                 loc_match = re.search(r'([A-Za-z\s]+),\s*Cars', card_text)
                 if loc_match:
                     location = loc_match.group(1).strip()
@@ -108,11 +98,10 @@ class IkmanScraper:
 
                 district = normalize_district(location)
 
-                # Extract Image
-                img_el = link_el.css('img')
+                img_el = link_el.select_one('img')
                 img_url = ""
                 if img_el:
-                    img_url = img_el[0].attrib.get('src', '')
+                    img_url = img_el.get('src', '')
 
                 detected_make, detected_model = detect_make_and_model(title, full_url)
 
@@ -139,15 +128,10 @@ class IkmanScraper:
                 })
         except Exception as e:
             print(f"[Ikman] Error scraping page {page_num}: {e}")
+            if "Max retries" in str(e):
+                self.last_rate_limited = True
 
-        # The card-level transmission/fuel_type/body_type above are just keyword
-        # guesses off the search-card text, which almost never mentions them —
-        # overwrite with the real values off each ad's own detail page.
-        # Tracked on self rather than returned, since scrape_page's return type
-        # (the item list) is relied on elsewhere — scrape_multi_pages checks this
-        # after each page so a rate limit actually stops the whole run instead of
-        # silently re-hitting a blocked endpoint on every remaining page.
-        self.last_rate_limited = False
+        self.last_rate_limited = getattr(self, "last_rate_limited", False)
         if results:
             from .detail_fetch import enrich_with_detail_specs, fetch_ikman_specs
             self.last_rate_limited = enrich_with_detail_specs(results, fetch_ikman_specs)
