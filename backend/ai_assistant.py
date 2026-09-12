@@ -4,8 +4,8 @@ import base64
 import requests
 from datetime import date
 from typing import Dict, Any, Optional
+from backend.copilot import resolve_ollama_host
 
-OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://192.168.1.23:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3-vl:8b")
 
 SYSTEM_PROMPT = f"""You are OTTO, an in-house vehicle acquisition assistant for a used-car flipper operating in Sri Lanka (Riyasewana / Ikman.lk listings).
@@ -80,7 +80,7 @@ def inspect_car(car: Dict[str, Any]) -> str:
         "think": False,
     }
 
-    resp = requests.post(f"{OLLAMA_HOST}/api/chat", json=payload, timeout=90)
+    resp = requests.post(f"{resolve_ollama_host()}/api/chat", json=payload, timeout=90)
     resp.raise_for_status()
     data = resp.json()
     content = data.get("message", {}).get("content", "").strip()
