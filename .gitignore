@@ -20,6 +20,10 @@ venv/
 # Ephemeral scraper rate-limit cooldown state (local, timestamp-only, no reason to version)
 data/rate_limit_state.json
 
+# Live copilot chat log (real user queries) -- runtime data, not source, and
+# the repo is public now, so this shouldn't be published or bloat history.
+data/copilot_chats.jsonl
+
 # Cloudflare Worker (cf-worker/) build/auth artifacts — never contains secrets
 # itself (the Worker's AUTH_TOKEN is set server-side via `wrangler secret put`),
 # but keep local tooling state out of git regardless.
